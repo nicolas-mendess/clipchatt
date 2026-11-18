@@ -1,0 +1,2874 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipChatt Studio — Clipes de Lives, Legendas & SEO 100% Client-Side</title>
+  <meta name="description" content="Crie, legende e otimize clipes de lives e vídeos direto no navegador, 100% grátis e sem custos de servidor. Pronto para GitHub Pages." />
+  <meta property="og:title" content="ClipChatt Studio — Criador de Clipes Ao Vivo Client-Side" />
+  <meta property="og:description" content="Corte lives e vídeos, adicione legendas virais e gere títulos e hashtags sem pagar servidores." />
+  <meta property="og:type" content="website" />
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            studio: {
+              bg: '#09090b',
+              card: '#121216',
+              elevated: '#18181d',
+              border: '#27272a',
+              purple: '#8b5cf6',
+              purpleHover: '#7c3aed',
+              emerald: '#10b981',
+              emeraldHover: '#059669',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- HLS.js via CDN para reprodução de streams ao vivo (.m3u8) com DVR -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Estilização customizada da barra de rolagem */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+
+    /* Sliders duplos sobrepostos para marcação de In (Início) e Out (Fim) */
+    .dual-range-input {
+      -webkit-appearance: none;
+      appearance: none;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      pointer-events: none;
+      margin: 0;
+      top: 0;
+      left: 0;
+    }
+
+    .dual-range-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      pointer-events: auto;
+      width: 18px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: ew-resize;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+      transition: transform 0.1s ease;
+    }
+
+    .dual-range-input::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    .dual-range-input::-moz-range-thumb {
+      pointer-events: auto;
+      width: 18px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: ew-resize;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+      transition: transform 0.1s ease;
+    }
+
+    #sliderIn::-webkit-slider-thumb {
+      background: #8b5cf6;
+    }
+    #sliderIn::-moz-range-thumb {
+      background: #8b5cf6;
+    }
+
+    #sliderOut::-webkit-slider-thumb {
+      background: #10b981;
+    }
+    #sliderOut::-moz-range-thumb {
+      background: #10b981;
+    }
+
+    /* Fundo quadriculado sutil para o palco do player */
+    .stage-grid {
+      background-image: radial-gradient(#27272a 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* Animação suave de entrada para notificações toast */
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    .toast-enter {
+      animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-studio-purple selection:text-white">
+
+  <!-- ==================== CABEÇALHO SUPERIOR ==================== -->
+  <header class="sticky top-0 z-40 bg-studio-bg/90 backdrop-blur-md border-b border-studio-border">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <!-- Logo & Identidade -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-studio-purple to-studio-emerald flex items-center justify-center shadow-lg shadow-studio-purple/20">
+          <i data-lucide="scissors" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight text-white">ClipChatt</span>
+            <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-studio-purple/20 text-studio-purple border border-studio-purple/30">Studio</span>
+          </div>
+          <p class="text-xs text-zinc-400 hidden sm:block">Editor de Clipes & Lives • 100% Processado no Navegador</p>
+        </div>
+      </div>
+
+      <!-- Indicadores de Arquitetura Client-Side (Custo Zero) -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-studio-card border border-studio-border text-xs">
+          <span class="w-2 h-2 rounded-full bg-studio-emerald animate-pulse"></span>
+          <span class="text-zinc-300 font-medium">Motor Local Ativo</span>
+          <span class="text-zinc-500">|</span>
+          <span id="memoryIndicator" class="font-mono text-studio-emerald">Custo R$ 0,00</span>
+        </div>
+
+        <button id="btnGithubDeployHelp" type="button" title="Publicar Grátis no GitHub Pages" class="px-3 py-2 rounded-xl bg-studio-card hover:bg-studio-elevated border border-studio-border text-zinc-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition">
+          <i data-lucide="github" class="w-4 h-4 text-studio-emerald"></i>
+          <span class="hidden sm:inline">Deploy GitHub</span>
+        </button>
+
+        <button id="btnShortcutsHelp" type="button" title="Atalhos de Teclado" class="p-2.5 rounded-xl bg-studio-card hover:bg-studio-elevated border border-studio-border text-zinc-300 hover:text-white transition">
+          <i data-lucide="keyboard" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 xl:grid-cols-12 gap-5">
+
+    <!-- COLUNA ESQUERDA / CENTRAL (8 colunas em telas XL): Fontes, Player e Timeline -->
+    <div class="xl:col-span-8 flex flex-col gap-5">
+
+      <!-- 1. SELETOR DE ENTRADA DE VÍDEO / LIVE (3 Modos Reais) -->
+      <section class="bg-studio-card border border-studio-border rounded-2xl p-4 sm:p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="radio" class="w-4 h-4 text-studio-purple"></i>
+            <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Fonte da Transmissão ou Vídeo</h2>
+          </div>
+
+          <!-- Abas dos 3 Modos -->
+          <div class="flex flex-wrap bg-studio-bg p-1 rounded-xl border border-studio-border gap-1 w-full sm:w-auto">
+            <button type="button" data-source-tab="url" class="source-tab flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition bg-studio-purple text-white shadow">
+              <i data-lucide="link" class="w-3.5 h-3.5"></i>
+              <span>Link Live / HLS</span>
+            </button>
+            <button type="button" data-source-tab="file" class="source-tab flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:text-white">
+              <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+              <span>Arquivo Local</span>
+            </button>
+            <button type="button" data-source-tab="screen" class="source-tab flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:text-white">
+              <i data-lucide="monitor-play" class="w-3.5 h-3.5"></i>
+              <span>Capturar Aba Ao Vivo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PAINEL MODO 1: Link de Live / Stream HLS (.m3u8) ou MP4 -->
+        <div id="panel-url" class="source-panel space-y-3">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <div class="relative flex-1">
+              <input
+                id="streamUrlInput"
+                type="url"
+                placeholder="Cole o link do YouTube, Twitch, Kick ou stream (.m3u8 / .mp4)..."
+                class="w-full bg-studio-bg border border-studio-border focus:border-studio-purple focus:ring-1 focus:ring-studio-purple rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition"
+              />
+            </div>
+            <button id="btnLoadUrl" type="button" class="px-5 py-2.5 rounded-xl bg-studio-purple hover:bg-studio-purpleHover text-white font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-studio-purple/20 shrink-0">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Analisar & Carregar</span>
+            </button>
+          </div>
+
+          <!-- Card de Status da Plataforma Detectada (YouTube / Twitch / Kick) -->
+          <div id="platformResolvedCard" class="hidden bg-studio-bg border border-studio-purple/40 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="platformThumbImg" src="" alt="Thumbnail" onerror="this.style.display='none'" class="w-16 h-10 object-cover rounded-lg border border-studio-border shrink-0 hidden" />
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span id="platformBadge" class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">YOUTUBE</span>
+                  <span id="platformModeLabel" class="text-[11px] text-zinc-400">Player Integrado + Captura Sem CORS</span>
+                </div>
+                <p id="platformMediaTitle" class="text-xs font-semibold text-white truncate mt-0.5">Carregando informações...</p>
+              </div>
+            </div>
+            <button id="btnCaptureEmbeddedNow" type="button" class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shrink-0 shadow-lg shadow-studio-emerald/20">
+              <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+              <span>Gravar & Gerar Clipes</span>
+            </button>
+          </div>
+
+          <!-- Exemplos & Streams de Teste Pré-Configuradas (1 Clique) -->
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <span class="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-studio-emerald"></i>
+              Testar Agora:
+            </span>
+            <button type="button" data-preset-url="https://www.youtube.com/watch?v=jfKfPfyJRdk" data-preset-name="Lofi Girl Live (YouTube)" class="preset-stream-btn text-xs px-3 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border hover:border-red-500/50 text-zinc-200 flex items-center gap-1.5 transition">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              YouTube Live
+            </button>
+            <button type="button" data-preset-url="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" data-preset-live="true" data-preset-name="Stream Direta HLS (.m3u8)" class="preset-stream-btn text-xs px-3 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border hover:border-studio-emerald/50 text-zinc-200 flex items-center gap-1.5 transition">
+              <span class="w-1.5 h-1.5 rounded-full bg-studio-emerald animate-ping"></span>
+              Live HLS Direta (.m3u8)
+            </button>
+            <button type="button" data-preset-url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" data-preset-live="false" data-preset-name="Sintel HD (MP4)" class="preset-stream-btn text-xs px-3 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border hover:border-zinc-600 text-zinc-300 flex items-center gap-1.5 transition">
+              <i data-lucide="film" class="w-3 h-3 text-zinc-400"></i>
+              Vídeo MP4 Direto
+            </button>
+          </div>
+        </div>
+
+        <!-- PAINEL MODO 2: Upload de Vídeo Local -->
+        <div id="panel-file" class="source-panel hidden">
+          <div id="dropZone" class="border-2 border-dashed border-studio-border hover:border-studio-purple/70 bg-studio-bg/60 rounded-xl p-6 text-center cursor-pointer transition group">
+            <input id="localFileInput" type="file" accept="video/mp4,video/webm,video/quicktime,video/*" class="hidden" />
+            <div class="w-12 h-12 rounded-2xl bg-studio-elevated group-hover:bg-studio-purple/20 border border-studio-border flex items-center justify-center mx-auto mb-3 transition">
+              <i data-lucide="file-video" class="w-6 h-6 text-studio-purple"></i>
+            </div>
+            <p class="text-sm font-semibold text-white">Arraste e solte seu vídeo aqui ou clique para selecionar</p>
+            <p class="text-xs text-zinc-400 mt-1">Suporta MP4, WebM, MOV • Nenhum dado é enviado para servidores</p>
+          </div>
+        </div>
+
+        <!-- PAINEL MODO 3: Captura de Aba / Tela ao Vivo (Bypass CORS) -->
+        <div id="panel-screen" class="source-panel hidden space-y-3">
+          <div class="bg-studio-bg border border-studio-border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-white">Captura de Aba ao Vivo (Twitch, YouTube, Kick)</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-studio-emerald/20 text-studio-emerald border border-studio-emerald/30">ZERO CORS</span>
+              </div>
+              <p class="text-xs text-zinc-400">
+                Capture qualquer aba do navegador com uma live rodando. O ClipChatt mantém um buffer circular na memória RAM para você voltar e clipar momentos ao vivo instantaneamente.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
+              <button id="btnStartScreenCapture" type="button" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-studio-emerald/20">
+                <i data-lucide="cast" class="w-4 h-4"></i>
+                <span>Iniciar Captura de Aba</span>
+              </button>
+              <button id="btnStopScreenCapture" type="button" class="hidden px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-400 font-semibold text-xs flex items-center justify-center gap-2 transition">
+                <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                <span>Encerrar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de status do Buffer Ao Vivo da Captura de Tela -->
+          <div id="screenBufferBar" class="hidden bg-studio-elevated border border-studio-border rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+              <span class="text-xs font-semibold text-white">Gravando Buffer Circular:</span>
+              <span id="captureBufferDuration" class="font-mono text-xs font-bold text-studio-emerald">00:00</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="btnFreezeBuffer" type="button" class="px-3 py-1.5 rounded-lg bg-studio-purple hover:bg-studio-purpleHover text-white text-xs font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+                <span>Congelar Buffer & Clipar Agora</span>
+              </button>
+              <button id="btnResumeLiveCapture" type="button" class="hidden px-3 py-1.5 rounded-lg bg-studio-emerald/20 hover:bg-studio-emerald/30 border border-studio-emerald/40 text-studio-emerald text-xs font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                <span>Voltar ao Sinal Ao Vivo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. PALCO DO PLAYER CANVAS & CONTROLES DE TRANSPORTE -->
+      <section class="bg-studio-card border border-studio-border rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col gap-4">
+        <!-- Cabeçalho de Status do Player -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span id="liveBadge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-[11px] font-bold uppercase tracking-wider shrink-0">
+              <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              AO VIVO
+            </span>
+            <span id="vodBadge" class="hidden px-2.5 py-1 rounded-lg bg-studio-purple/20 border border-studio-purple/40 text-studio-purple text-[11px] font-bold uppercase tracking-wider shrink-0">
+              VÍDEO / VOD
+            </span>
+            <h3 id="currentSourceTitle" class="text-xs sm:text-sm font-semibold text-zinc-200 truncate">
+              Nenhuma mídia carregada
+            </h3>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="canvasResolutionBadge" class="font-mono text-[11px] px-2.5 py-1 rounded-lg bg-studio-bg border border-studio-border text-zinc-400">
+              1280×720 • 16:9
+            </span>
+            <button id="btnToggleSafeZone" type="button" title="Mostrar Guias TikTok / Reels / Shorts" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border text-xs text-zinc-300 transition">
+              <i data-lucide="smartphone" class="w-3.5 h-3.5 text-studio-emerald"></i>
+              <span>Guias 9:16</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Área Visual do Canvas Compositor -->
+        <div class="relative w-full min-h-[260px] sm:min-h-[380px] stage-grid bg-studio-bg rounded-xl border border-studio-border flex items-center justify-center overflow-hidden p-3">
+          <!-- Elementos de vídeo ocultos usados como fonte para o Canvas -->
+          <video id="sourceVideo" playsinline class="hidden"></video>
+          <video id="liveMonitorVideo" muted playsinline class="hidden"></video>
+
+          <!-- Canvas Principal de Pré-visualização e Composição -->
+          <canvas id="previewCanvas" width="1280" height="720" class="max-w-full max-h-[58vh] w-auto h-auto rounded-xl shadow-2xl border border-studio-border bg-black"></canvas>
+
+          <!-- Palco Embutido para Links do YouTube / Twitch / Kick (Bypass de CORS) -->
+          <div id="embedStageContainer" class="hidden absolute inset-0 bg-black flex flex-col z-20">
+            <div class="bg-studio-card/95 border-b border-studio-border px-3.5 py-2 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-xs text-zinc-300">
+                <span class="w-2 h-2 rounded-full bg-studio-emerald animate-pulse"></span>
+                <span>Reproduzindo via Player Oficial (Protegido contra CORS). Clique ao lado para capturar e gerar clipes:</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btnStageCaptureAndAutoClip" type="button" class="px-3 py-1.5 rounded-lg bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition">
+                  <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                  <span>Capturar Aba & Gerar Clipes</span>
+                </button>
+                <button id="btnCloseEmbedStage" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border text-zinc-300 text-xs transition">
+                  Fechar Player
+                </button>
+              </div>
+            </div>
+            <div class="flex-1 w-full h-full bg-black">
+              <iframe id="platformEmbedIframe" src="about:blank" class="w-full h-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+            </div>
+          </div>
+
+          <!-- Overlay de Safe-Zone para TikTok / Reels / Shorts (9:16) -->
+          <div id="safeZoneOverlay" class="hidden pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="h-full aspect-[9/16] border-2 border-dashed border-studio-emerald/70 relative">
+              <div class="absolute top-3 inset-x-3 h-10 rounded-lg bg-red-500/15 border border-red-400/40 flex items-center justify-center text-[10px] font-mono text-red-300">
+                ÁREA SUPERIOR (PERFIL / PESQUISA)
+              </div>
+              <div class="absolute right-2 bottom-24 w-10 h-44 rounded-lg bg-red-500/15 border border-red-400/40 flex items-center justify-center text-[9px] font-mono text-red-300 [writing-mode:vertical-rl]">
+                ÍCONES LATERAIS
+              </div>
+              <div class="absolute bottom-2 inset-x-3 h-20 rounded-lg bg-red-500/15 border border-red-400/40 flex items-center justify-center text-[10px] font-mono text-red-300">
+                DESCRIÇÃO & ÁUDIO (EVITE LEGENDAS AQUI)
+              </div>
+            </div>
+          </div>
+
+          <!-- Placeholder Inicial antes de carregar mídia -->
+          <div id="emptyPlayerPlaceholder" class="absolute inset-0 bg-studio-bg/95 flex flex-col items-center justify-center p-6 text-center z-10">
+            <div class="w-14 h-14 rounded-2xl bg-studio-elevated border border-studio-border flex items-center justify-center mb-3 shadow-lg">
+              <i data-lucide="clapperboard" class="w-7 h-7 text-studio-purple"></i>
+            </div>
+            <h4 class="text-sm sm:text-base font-bold text-white">Pronto para Clipar Ao Vivo ou Vídeo</h4>
+            <p class="text-xs text-zinc-400 max-w-md mt-1 leading-relaxed">
+              Cole um link <code class="text-studio-emerald">.m3u8</code>, envie um vídeo do computador ou capture qualquer aba do navegador com uma live aberta.
+            </p>
+            <button id="btnQuickStartDemo" type="button" class="mt-4 px-4 py-2.5 rounded-xl bg-studio-purple hover:bg-studio-purpleHover text-white text-xs font-bold flex items-center gap-2 transition shadow-lg shadow-studio-purple/25">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              <span>Testar Stream Ao Vivo Agora</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Controles de Transporte do Player -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-studio-bg border border-studio-border rounded-xl px-3.5 py-2.5">
+          <div class="flex items-center gap-2">
+            <button id="btnPlayPause" type="button" title="Play / Pausar (Espaço)" class="p-2.5 rounded-xl bg-studio-purple hover:bg-studio-purpleHover text-white transition">
+              <i id="iconPlayPause" data-lucide="play" class="w-4 h-4"></i>
+            </button>
+            <button id="btnJumpToIn" type="button" title="Ir para o Início do Clipe (In)" class="px-2.5 py-2 rounded-xl bg-studio-card hover:bg-studio-elevated border border-studio-border text-xs font-mono text-zinc-300 transition">
+              |&lt; In
+            </button>
+            <button id="btnJumpToOut" type="button" title="Ir para o Fim do Clipe (Out)" class="px-2.5 py-2 rounded-xl bg-studio-card hover:bg-studio-elevated border border-studio-border text-xs font-mono text-zinc-300 transition">
+              Out &gt;|
+            </button>
+            <button id="btnToggleLoop" type="button" title="Repetir Trecho Selecionado em Loop" class="px-2.5 py-2 rounded-xl bg-studio-purple/20 border border-studio-purple/40 text-studio-purple text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Loop</span>
+            </button>
+          </div>
+
+          <!-- Relógio de Timecode -->
+          <div class="font-mono text-xs sm:text-sm bg-studio-card px-3 py-1.5 rounded-lg border border-studio-border">
+            <span id="currentTimeDisplay" class="text-white font-bold">00:00.0</span>
+            <span class="text-zinc-500 mx-1">/</span>
+            <span id="totalDurationDisplay" class="text-zinc-400">00:00.0</span>
+          </div>
+
+          <!-- Controle de Áudio -->
+          <div class="flex items-center gap-2">
+            <button id="btnMuteToggle" type="button" title="Mutar / Desmutar" class="p-2 rounded-xl bg-studio-card hover:bg-studio-elevated border border-studio-border text-zinc-300 transition">
+              <i id="iconVolume" data-lucide="volume-2" class="w-4 h-4"></i>
+            </button>
+            <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="1" class="w-20 accent-studio-purple cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. TIMELINE DE CORTE PRECISO (IN / OUT) & ATALHOS AO VIVO -->
+      <section class="bg-studio-card border border-studio-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-studio-emerald"></i>
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">Timeline de Corte & IA</h3>
+          </div>
+
+          <!-- Atalhos de Clipagem Instantânea & Auto-Gerador de Clipes -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button id="btnAutoGenerateClips" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-studio-purple to-studio-emerald text-white text-xs font-bold flex items-center gap-1.5 shadow-md hover:opacity-95 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Auto-Gerar Clipes (IA)</span>
+            </button>
+            <button type="button" data-quick-clip="15" class="quick-clip-btn px-2.5 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border text-xs font-mono font-semibold text-studio-emerald transition">
+              Últimos 15s
+            </button>
+            <button type="button" data-quick-clip="30" class="quick-clip-btn px-2.5 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border text-xs font-mono font-semibold text-zinc-200 transition">
+              Últimos 30s
+            </button>
+          </div>
+        </div>
+
+        <!-- Sugestões Automáticas de Clipes Geradas pelo Motor de Picos & IA -->
+        <div id="autoClipsSuggestionsBox" class="hidden bg-studio-bg border border-studio-purple/40 rounded-xl p-3 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-400"></i>
+              Melhores Momentos Detectados Automaticamente
+            </span>
+            <button id="btnCloseAutoClips" type="button" class="text-[11px] text-zinc-400 hover:text-white">Ocultar</button>
+          </div>
+          <div id="autoClipsList" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- Trilho Visual da Timeline com Sliders Duplos -->
+        <div class="relative h-12 bg-studio-bg border border-studio-border rounded-xl px-2 flex items-center select-none">
+          <!-- Fundo da faixa -->
+          <div class="relative w-full h-3 bg-zinc-800 rounded-full">
+            <!-- Trecho selecionado entre In e Out -->
+            <div id="selectedRangeBar" class="absolute top-0 h-full bg-gradient-to-r from-studio-purple to-studio-emerald rounded-full" style="left: 0%; width: 100%;"></div>
+            <!-- Agulha de reprodução atual (Playhead) -->
+            <div id="playheadNeedle" class="absolute -top-2.5 w-0.5 h-8 bg-white shadow-[0_0_8px_#fff] pointer-events-none" style="left: 0%;"></div>
+          </div>
+
+          <!-- Inputs Range Sobrepostos -->
+          <input id="sliderIn" type="range" min="0" max="100" step="0.1" value="0" class="dual-range-input" aria-label="Ponto de Início do Clipe" />
+          <input id="sliderOut" type="range" min="0" max="100" step="0.1" value="100" class="dual-range-input" aria-label="Ponto de Fim do Clipe" />
+        </div>
+
+        <!-- Painel de Ajuste Fino de Milissegundos e Métricas do Clipe -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Ponto IN (Início) -->
+          <div class="bg-studio-bg border border-studio-border rounded-xl p-3 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-studio-purple block">Início (In)</span>
+              <span id="inTimeLabel" class="font-mono text-sm font-bold text-white">00:00.0</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button id="btnInMinus" type="button" class="px-2 py-1 rounded-lg bg-studio-card hover:bg-studio-elevated border border-studio-border font-mono text-xs text-zinc-300">-0.5s</button>
+              <button id="btnInPlus" type="button" class="px-2 py-1 rounded-lg bg-studio-card hover:bg-studio-elevated border border-studio-border font-mono text-xs text-zinc-300">+0.5s</button>
+              <button id="btnMarkInNow" type="button" title="Marcar In no tempo atual (Tecla I)" class="px-2 py-1 rounded-lg bg-studio-purple/20 hover:bg-studio-purple/30 border border-studio-purple/40 font-mono text-xs font-bold text-studio-purple">Agora</button>
+            </div>
+          </div>
+
+          <!-- Resumo da Seleção -->
+          <div class="bg-studio-bg border border-studio-border rounded-xl p-3 flex items-center justify-around text-center">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Duração do Clipe</span>
+              <span id="clipDurationLabel" class="font-mono text-sm font-extrabold text-studio-emerald">0.0s</span>
+            </div>
+            <div class="h-7 w-px bg-studio-border"></div>
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Tamanho Est.</span>
+              <span id="estimatedSizeLabel" class="font-mono text-xs font-semibold text-zinc-300">~0 KB</span>
+            </div>
+          </div>
+
+          <!-- Ponto OUT (Fim) -->
+          <div class="bg-studio-bg border border-studio-border rounded-xl p-3 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-studio-emerald block">Fim (Out)</span>
+              <span id="outTimeLabel" class="font-mono text-sm font-bold text-white">00:00.0</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button id="btnOutMinus" type="button" class="px-2 py-1 rounded-lg bg-studio-card hover:bg-studio-elevated border border-studio-border font-mono text-xs text-zinc-300">-0.5s</button>
+              <button id="btnOutPlus" type="button" class="px-2 py-1 rounded-lg bg-studio-card hover:bg-studio-elevated border border-studio-border font-mono text-xs text-zinc-300">+0.5s</button>
+              <button id="btnMarkOutNow" type="button" title="Marcar Out no tempo atual (Tecla O)" class="px-2 py-1 rounded-lg bg-studio-emerald/20 hover:bg-studio-emerald/30 border border-studio-emerald/40 font-mono text-xs font-bold text-studio-emerald">Agora</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- COLUNA DIREITA (4 colunas em telas XL): Formatação Social, Legendas, SEO e Galeria -->
+    <div class="xl:col-span-4 flex flex-col gap-5">
+
+      <!-- 4. PAINEL DE ESTÚDIO COM ABAS (FORMATO / LEGENDAS / SEO & POST) -->
+      <section class="bg-studio-card border border-studio-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <!-- Navegação por Abas do Painel Direito -->
+        <div class="grid grid-cols-3 bg-studio-bg p-1 rounded-xl border border-studio-border gap-1">
+          <button type="button" data-studio-tab="format" class="studio-tab flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition bg-studio-purple text-white shadow">
+            <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+            <span>Formato</span>
+          </button>
+          <button type="button" data-studio-tab="captions" class="studio-tab flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition text-zinc-400 hover:text-white">
+            <i data-lucide="captions" class="w-3.5 h-3.5"></i>
+            <span>Legendas</span>
+            <span id="captionsBadgeCount" class="hidden text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-studio-emerald/20 text-studio-emerald">0</span>
+          </button>
+          <button type="button" data-studio-tab="seo" class="studio-tab flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition text-zinc-400 hover:text-white">
+            <i data-lucide="rocket" class="w-3.5 h-3.5"></i>
+            <span>SEO & Post</span>
+          </button>
+        </div>
+
+        <!-- ==================== ABA 1: FORMATO & RENDERIZAÇÃO ==================== -->
+        <div id="studio-panel-format" class="studio-panel space-y-4">
+          <!-- Seletor de Proporção (Aspect Ratio) -->
+          <div class="space-y-2">
+            <label class="text-xs font-medium text-zinc-400">Proporção do Vídeo</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" data-aspect="16:9" class="aspect-btn p-2.5 rounded-xl border border-studio-purple bg-studio-purple/15 text-white flex flex-col items-center gap-1 transition">
+                <div class="w-7 h-4 border-2 border-current rounded-sm"></div>
+                <span class="text-xs font-bold">16:9</span>
+                <span class="text-[10px] text-zinc-400">YouTube / X</span>
+              </button>
+
+              <button type="button" data-aspect="9:16" class="aspect-btn p-2.5 rounded-xl border border-studio-border bg-studio-bg hover:bg-studio-elevated text-zinc-400 hover:text-white flex flex-col items-center gap-1 transition">
+                <div class="w-4 h-7 border-2 border-current rounded-sm"></div>
+                <span class="text-xs font-bold">9:16</span>
+                <span class="text-[10px] text-zinc-400">TikTok / Reels</span>
+              </button>
+
+              <button type="button" data-aspect="1:1" class="aspect-btn p-2.5 rounded-xl border border-studio-border bg-studio-bg hover:bg-studio-elevated text-zinc-400 hover:text-white flex flex-col items-center gap-1 transition">
+                <div class="w-5 h-5 border-2 border-current rounded-sm"></div>
+                <span class="text-xs font-bold">1:1</span>
+                <span class="text-[10px] text-zinc-400">Feed / Square</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Modo de Enquadramento Vertical 9:16 (Condicional) -->
+          <div id="verticalFramingBox" class="hidden space-y-2 bg-studio-bg border border-studio-border rounded-xl p-3">
+            <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-studio-emerald"></i>
+              Enquadramento Vertical (9:16)
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-fit="blur" class="fit-mode-btn py-2 px-2.5 rounded-lg border border-studio-emerald bg-studio-emerald/15 text-white text-xs font-semibold transition">
+                Fundo Desfocado
+              </button>
+              <button type="button" data-fit="crop" class="fit-mode-btn py-2 px-2.5 rounded-lg border border-studio-border bg-studio-card text-zinc-400 hover:text-white text-xs font-semibold transition">
+                Zoom Centralizado
+              </button>
+            </div>
+          </div>
+
+          <!-- Campo de Título / Marca d'Água Sobreposta -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label for="watermarkInput" class="text-xs font-medium text-zinc-400">Título / Marca d'Água no Clipe (Opcional)</label>
+              <select id="watermarkPosition" class="bg-studio-bg border border-studio-border rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none">
+                <option value="top">Topo</option>
+                <option value="bottom">Base</option>
+              </select>
+            </div>
+            <input
+              id="watermarkInput"
+              type="text"
+              maxlength="42"
+              placeholder="Ex: @SeuCanal • Jogada Épica Ao Vivo"
+              class="w-full bg-studio-bg border border-studio-border focus:border-studio-purple rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 outline-none transition"
+            />
+          </div>
+        </div>
+
+        <!-- ==================== ABA 2: LEGENDAS ESTILIZADAS (BURN-IN) ==================== -->
+        <div id="studio-panel-captions" class="studio-panel hidden space-y-3.5">
+          <!-- Controles de Captura Automática por Voz & Adição Manual -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnAutoTranscribe" type="button" class="flex-1 py-2.5 px-3 rounded-xl bg-studio-emerald/15 hover:bg-studio-emerald/25 border border-studio-emerald/40 text-studio-emerald text-xs font-bold flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="mic" id="iconAutoTranscribe" class="w-3.5 h-3.5"></i>
+              <span id="labelAutoTranscribe">Auto-Legenda Voz</span>
+            </button>
+
+            <button id="btnAddCaptionBlock" type="button" class="py-2.5 px-3 rounded-xl bg-studio-bg hover:bg-studio-elevated border border-studio-border text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-studio-purple"></i>
+              <span>+ Trecho</span>
+            </button>
+
+            <button id="btnClearCaptions" type="button" title="Limpar todas as legendas" class="p-2.5 rounded-xl bg-studio-bg hover:bg-red-500/15 border border-studio-border hover:border-red-500/40 text-zinc-400 hover:text-red-400 transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Status da Escuta em Tempo Real -->
+          <div id="speechLiveBanner" class="hidden bg-studio-emerald/10 border border-studio-emerald/30 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2 h-2 rounded-full bg-studio-emerald animate-ping shrink-0"></span>
+              <span id="speechInterimText" class="text-[11px] text-zinc-200 truncate italic">Ouvindo fala em português (pt-BR)...</span>
+            </div>
+            <span class="text-[10px] font-mono text-studio-emerald shrink-0">AO VIVO</span>
+          </div>
+
+          <!-- Estilo Visual Estilo TikTok / Reels / Hormozi -->
+          <div class="bg-studio-bg border border-studio-border rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Estilo Visual (Burn-in)</span>
+              <label class="flex items-center gap-1.5 text-[11px] text-zinc-300 cursor-pointer">
+                <input id="chkCaptionPop" type="checkbox" checked class="accent-studio-purple rounded" />
+                <span>Destaque Palavra</span>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-cap-style="viral-yellow" class="cap-style-btn py-1.5 px-2.5 rounded-lg border border-studio-purple bg-studio-purple/15 text-yellow-300 text-[11px] font-extrabold tracking-wide transition">
+                VIRAL AMARELO
+              </button>
+              <button type="button" data-cap-style="modern-box" class="cap-style-btn py-1.5 px-2.5 rounded-lg border border-studio-border bg-studio-card text-white text-[11px] font-bold transition">
+                Caixa Branca
+              </button>
+              <button type="button" data-cap-style="neon-cyber" class="cap-style-btn py-1.5 px-2.5 rounded-lg border border-studio-border bg-studio-card text-emerald-400 text-[11px] font-extrabold transition">
+                NEON CYBER
+              </button>
+              <button type="button" data-cap-style="minimal-shadow" class="cap-style-btn py-1.5 px-2.5 rounded-lg border border-studio-border bg-studio-card text-zinc-200 text-[11px] font-semibold transition">
+                Minimal Sombra
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div>
+                <label class="block text-[10px] text-zinc-400 mb-1">Posição Vertical</label>
+                <select id="captionPositionSelect" class="w-full bg-studio-card border border-studio-border rounded-lg px-2 py-1.5 text-xs text-white outline-none">
+                  <option value="bottom">Base (Acima Safe-Zone)</option>
+                  <option value="center">Centro do Vídeo</option>
+                  <option value="top">Topo</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] text-zinc-400 mb-1">Tamanho da Fonte</label>
+                <select id="captionSizeSelect" class="w-full bg-studio-card border border-studio-border rounded-lg px-2 py-1.5 text-xs text-white outline-none">
+                  <option value="small">Compacto</option>
+                  <option value="medium" selected>Médio (Padrão)</option>
+                  <option value="large">Grande (Reels/Shorts)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista Editável de Blocos de Legenda -->
+          <div id="captionsListContainer" class="space-y-2 max-h-[210px] overflow-y-auto pr-1">
+            <div id="emptyCaptionsHint" class="text-center py-4 px-3 border border-dashed border-studio-border rounded-xl">
+              <p class="text-xs text-zinc-400">Nenhuma legenda adicionada ainda.</p>
+              <p class="text-[11px] text-zinc-500 mt-0.5">Use <strong class="text-studio-emerald">Auto-Legenda Voz</strong> ou clique em <strong class="text-studio-purple">+ Trecho</strong> para legendar seu clipe.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ABA 3: GERADOR DE TÍTULO, DESCRIÇÃO & HASHTAGS ==================== -->
+        <div id="studio-panel-seo" class="studio-panel hidden space-y-3.5">
+          <!-- Contexto do Clipe + Botão Puxar das Legendas -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label for="seoContextInput" class="text-xs font-medium text-zinc-300">Sobre o que é este clipe?</label>
+              <button id="btnPullContextFromCaptions" type="button" class="text-[11px] text-studio-emerald hover:underline font-semibold flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                <span>Usar texto das legendas</span>
+              </button>
+            </div>
+            <textarea
+              id="seoContextInput"
+              rows="2"
+              placeholder="Ex: Clutch 1v4 impossível no final da partida ao vivo ou corte de podcast sobre produtividade..."
+              class="w-full bg-studio-bg border border-studio-border focus:border-studio-purple rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none transition resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Plataforma & Tom -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-zinc-400 mb-1">Plataforma Alvo</label>
+              <select id="seoPlatformSelect" class="w-full bg-studio-bg border border-studio-border rounded-xl px-2.5 py-2 text-xs text-white outline-none">
+                <option value="shorts">YouTube Shorts</option>
+                <option value="tiktok">TikTok</option>
+                <option value="reels">Instagram Reels</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-zinc-400 mb-1">Estilo / Gancho</label>
+              <select id="seoToneSelect" class="w-full bg-studio-bg border border-studio-border rounded-xl px-2.5 py-2 text-xs text-white outline-none">
+                <option value="epic">Épico / Jogada Insana</option>
+                <option value="funny">Engraçado / Meme</option>
+                <option value="podcast">Corte Podcast / Opinião</option>
+                <option value="tips">Dica Rápida / Tutorial</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Configuração Opcional de Chave Gratuita Gemini (LocalStorage) -->
+          <details class="bg-studio-bg border border-studio-border rounded-xl px-3 py-2 text-xs">
+            <summary class="cursor-pointer font-medium text-zinc-400 hover:text-zinc-200 flex items-center justify-between select-none">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="key-round" class="w-3.5 h-3.5 text-studio-purple"></i>
+                <span>Chave IA Gemini Gratuita (Opcional)</span>
+              </span>
+              <span id="geminiKeyStatusBadge" class="text-[10px] font-mono text-zinc-500">Modo Offline</span>
+            </summary>
+            <div class="pt-2.5 space-y-2">
+              <p class="text-[11px] text-zinc-400 leading-relaxed">
+                Sem chave, usamos nosso motor viral instantâneo offline. Se quiser IA generativa, cole sua chave gratuita do Google AI Studio (salva apenas no seu navegador):
+              </p>
+              <div class="flex gap-1.5">
+                <input id="geminiApiKeyInput" type="password" placeholder="AIzaSy..." class="flex-1 bg-studio-card border border-studio-border rounded-lg px-2.5 py-1.5 text-xs text-white outline-none" />
+                <button id="btnSaveGeminiKey" type="button" class="px-3 py-1.5 rounded-lg bg-studio-purple hover:bg-studio-purpleHover text-white font-semibold text-xs transition">
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </details>
+
+          <!-- Botão Gerar SEO Viral -->
+          <button id="btnGenerateSeo" type="button" class="w-full py-2.5 px-4 rounded-xl bg-studio-purple/20 hover:bg-studio-purple/30 border border-studio-purple/50 text-white font-bold text-xs flex items-center justify-center gap-2 transition">
+            <i data-lucide="wand-sparkles" class="w-4 h-4 text-studio-purple"></i>
+            <span>Gerar Título, Descrição & Hashtags</span>
+          </button>
+
+          <!-- Resultados Gerados com Botões de Cópia -->
+          <div id="seoOutputBox" class="hidden space-y-2.5 bg-studio-bg border border-studio-border rounded-xl p-3">
+            <!-- Título -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-studio-purple">Título Viral</span>
+                <button type="button" data-copy-target="seoTitleOutput" class="copy-seo-btn text-[11px] text-zinc-400 hover:text-white flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <input id="seoTitleOutput" type="text" readonly class="w-full bg-studio-card border border-studio-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white outline-none" />
+            </div>
+
+            <!-- Descrição -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-studio-emerald">Descrição Otimizada</span>
+                <button type="button" data-copy-target="seoDescOutput" class="copy-seo-btn text-[11px] text-zinc-400 hover:text-white flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <textarea id="seoDescOutput" rows="3" readonly class="w-full bg-studio-card border border-studio-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 outline-none resize-none"></textarea>
+            </div>
+
+            <!-- Hashtags -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Hashtags</span>
+                <button type="button" data-copy-target="seoTagsOutput" class="copy-seo-btn text-[11px] text-zinc-400 hover:text-white flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <input id="seoTagsOutput" type="text" readonly class="w-full bg-studio-card border border-studio-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-300 outline-none" />
+            </div>
+
+            <button id="btnCopyAllSeo" type="button" class="w-full py-2 rounded-lg bg-studio-emerald/20 hover:bg-studio-emerald/30 border border-studio-emerald/40 text-studio-emerald font-bold text-xs flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+              <span>Copiar Tudo Pronto para Postar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Botão Principal de Renderização Client-Side (Sempre Visível no Rodapé do Card) -->
+        <div class="pt-2 border-t border-studio-border">
+          <button id="btnRenderClip" type="button" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-studio-purple to-studio-emerald hover:opacity-95 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-studio-purple/25">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Gerar & Exportar Clipe</span>
+          </button>
+        </div>
+
+        <!-- Barra de Progresso de Renderização em Tempo Real -->
+        <div id="renderProgressBox" class="hidden bg-studio-bg border border-studio-purple/40 rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span id="renderStatusText" class="font-semibold text-studio-purple flex items-center gap-1.5">
+              <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+              Renderizando no navegador...
+            </span>
+            <span id="renderPercentText" class="font-mono font-bold text-white">0%</span>
+          </div>
+          <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div id="renderProgressBar" class="h-full bg-gradient-to-r from-studio-purple to-studio-emerald transition-all duration-150" style="width: 0%;"></div>
+          </div>
+          <div class="flex justify-end">
+            <button id="btnCancelRender" type="button" class="text-[11px] text-red-400 hover:text-red-300 font-semibold">
+              Cancelar Renderização
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. GALERIA DE CLIPES DA SESSÃO -->
+      <section class="bg-studio-card border border-studio-border rounded-2xl p-4 sm:p-5 shadow-xl flex-1 flex flex-col min-h-[280px]">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="folder-check" class="w-4 h-4 text-studio-emerald"></i>
+            <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Clipes Gerados na Sessão</h2>
+          </div>
+          <span id="clipsCountBadge" class="font-mono text-xs px-2.5 py-0.5 rounded-full bg-studio-bg border border-studio-border text-zinc-300">
+            0 clipes
+          </span>
+        </div>
+
+        <!-- Lista de Clipes -->
+        <div id="clipsGalleryList" class="flex-1 space-y-3 overflow-y-auto max-h-[420px] pr-1">
+          <!-- Estado Vazio -->
+          <div id="emptyGalleryState" class="h-full min-h-[180px] border border-dashed border-studio-border rounded-xl flex flex-col items-center justify-center p-5 text-center">
+            <i data-lucide="film" class="w-7 h-7 text-zinc-600 mb-2"></i>
+            <p class="text-xs font-medium text-zinc-400">Nenhum clipe renderizado ainda</p>
+            <p class="text-[11px] text-zinc-500 mt-1">Marque o início e fim na timeline e clique em "Gerar & Exportar Clipe".</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ==================== MODAL DE PRÉ-VISUALIZAÇÃO DO CLIPE EXPORTADO ==================== -->
+  <div id="clipPreviewModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-studio-card border border-studio-border rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 id="modalClipTitle" class="text-sm font-bold text-white">Pré-visualização do Clipe</h3>
+          <p id="modalClipMeta" class="text-xs font-mono text-zinc-400 mt-0.5"></p>
+        </div>
+        <button id="btnCloseModal" type="button" class="p-1.5 rounded-lg hover:bg-studio-elevated text-zinc-400 hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="bg-black rounded-xl overflow-hidden border border-studio-border flex items-center justify-center">
+        <video id="modalVideoPlayer" controls playsinline class="max-h-[65vh] w-auto"></video>
+      </div>
+
+      <div class="flex justify-end">
+        <a id="modalDownloadBtn" href="#" download="clipe.webm" class="px-4 py-2.5 rounded-xl bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 font-bold text-xs flex items-center gap-2 transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Baixar Clipe Agora</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE DEPLOY GRATUITO NO GITHUB PAGES ==================== -->
+  <div id="githubDeployModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-studio-card border border-studio-border rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="github" class="w-4 h-4 text-studio-emerald"></i>
+          Publicar Grátis no GitHub Pages (Custo R$ 0,00)
+        </h3>
+        <button id="btnCloseGithubModal" type="button" class="p-1 rounded-lg hover:bg-studio-elevated text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-zinc-300 leading-relaxed">
+        Este aplicativo foi arquitetado em <strong>arquivo único (<code class="text-studio-emerald">index.html</code>)</strong> sem dependências de build, pronto para hospedagem gratuita vitalícia com HTTPS automático:
+      </p>
+      <ol class="space-y-2.5 text-xs text-zinc-300 bg-studio-bg border border-studio-border rounded-xl p-4 list-decimal list-inside">
+        <li>Crie um repositório público no GitHub (ex: <code class="text-studio-purple">clipchatt-studio</code>).</li>
+        <li>Envie este arquivo salvo exatamente como <code class="text-studio-emerald">index.html</code> para a raiz do repositório.</li>
+        <li>Vá em <strong>Settings → Pages</strong>, selecione a branch <code class="text-white">main</code> e pasta <code class="text-white">/ (root)</code> e clique em <strong>Save</strong>.</li>
+      </ol>
+      <div class="flex items-center justify-between pt-1">
+        <span class="text-[11px] text-zinc-400">Dica: Você também pode conectar o repo na Vercel ou Cloudflare Pages.</span>
+        <button id="btnDownloadSourceHtml" type="button" class="px-3.5 py-2 rounded-xl bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Baixar index.html</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE ATALHOS DE TECLADO ==================== -->
+  <div id="shortcutsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-studio-card border border-studio-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="keyboard" class="w-4 h-4 text-studio-purple"></i>
+          Atalhos Rápidos de Edição
+        </h3>
+        <button id="btnCloseShortcuts" type="button" class="p-1 rounded-lg hover:bg-studio-elevated text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div class="flex justify-between py-1.5 border-b border-studio-border">
+          <span class="text-zinc-400">Play / Pausar</span>
+          <kbd class="font-mono px-2 py-0.5 bg-studio-bg border border-studio-border rounded text-white">Espaço</kbd>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-studio-border">
+          <span class="text-zinc-400">Marcar Início (In) no tempo atual</span>
+          <kbd class="font-mono px-2 py-0.5 bg-studio-bg border border-studio-border rounded text-studio-purple">I</kbd>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-studio-border">
+          <span class="text-zinc-400">Marcar Fim (Out) no tempo atual</span>
+          <kbd class="font-mono px-2 py-0.5 bg-studio-bg border border-studio-border rounded text-studio-emerald">O</kbd>
+        </div>
+        <div class="flex justify-between py-1.5">
+          <span class="text-zinc-400">Voltar / Avançar 1 segundo</span>
+          <div class="space-x-1">
+            <kbd class="font-mono px-2 py-0.5 bg-studio-bg border border-studio-border rounded text-white">←</kbd>
+            <kbd class="font-mono px-2 py-0.5 bg-studio-bg border border-studio-border rounded text-white">→</kbd>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CONTAINER DE NOTIFICAÇÕES TOAST ==================== -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ==================== LÓGICA DA APLICAÇÃO (100% CLIENT-SIDE) ==================== -->
+  <script>
+    /**
+     * ClipChatt Studio - Motor de Edição e Clipagem 100% Client-Side
+     * Arquitetura:
+     * - HLS.js para reprodução de transmissões ao vivo (.m3u8) com janela DVR
+     * - getDisplayMedia + MediaRecorder para captura ao vivo de abas sem bloqueio CORS
+     * - HTML5 Canvas 2D para composição em tempo real (16:9, 9:16 Blur Fill / Crop, 1:1 e Marca d'água)
+     * - Web Audio API + MediaRecorder nativo para exportação direta no navegador
+     */
+
+    // 1. ESTADO GLOBAL DA APLICAÇÃO
+    const state = {
+      sourceType: 'url', // 'url' | 'file' | 'screen'
+      sourceName: '',
+      isLive: false,
+      hasMedia: false,
+      hlsInstance: null,
+
+      // Estado da Captura de Tela / Aba ao Vivo
+      screenStream: null,
+      screenRecorder: null,
+      screenChunks: [],
+      screenMimeType: '',
+      screenStartTime: 0,
+      screenTimerInterval: null,
+      isMonitoringLiveScreen: false,
+
+      // Estado de Tempo e Corte
+      minTime: 0,
+      maxTime: 0,
+      inTime: 0,
+      outTime: 0,
+      loopClip: true,
+
+      // Configurações de Formatação Social
+      aspectRatio: '16:9', // '16:9' | '9:16' | '1:1'
+      verticalFit: 'blur', // 'blur' | 'crop'
+      watermarkText: '',
+      watermarkPos: 'top',
+      showSafeZone: false,
+
+      // Sistema de Legendas Estilizadas (Burn-in)
+      captions: [], // Array<{ id, start, end, text }>
+      captionStyle: 'viral-yellow', // 'viral-yellow' | 'modern-box' | 'neon-cyber' | 'minimal-shadow'
+      captionPosition: 'bottom', // 'bottom' | 'center' | 'top'
+      captionSize: 'medium', // 'small' | 'medium' | 'large'
+      captionHighlightWord: true,
+      isTranscribing: false,
+      recognitionInstance: null,
+
+      // Gerador de SEO Viral (Título, Descrição & Hashtags)
+      geminiApiKey: localStorage.getItem('clipchatt_gemini_key') || '',
+
+      // Estado de Áudio & Renderização
+      audioCtx: null,
+      audioSourceNode: null,
+      audioDestNode: null,
+      isRendering: false,
+      cancelRenderFlag: false,
+      activeRecorder: null,
+
+      // Clipes gerados na sessão
+      clips: []
+    };
+
+    // 2. REFERÊNCIAS DO DOM
+    const dom = {
+      sourceVideo: document.getElementById('sourceVideo'),
+      liveMonitorVideo: document.getElementById('liveMonitorVideo'),
+      previewCanvas: document.getElementById('previewCanvas'),
+      emptyPlayerPlaceholder: document.getElementById('emptyPlayerPlaceholder'),
+      liveBadge: document.getElementById('liveBadge'),
+      vodBadge: document.getElementById('vodBadge'),
+      currentSourceTitle: document.getElementById('currentSourceTitle'),
+      canvasResolutionBadge: document.getElementById('canvasResolutionBadge'),
+      btnToggleSafeZone: document.getElementById('btnToggleSafeZone'),
+      safeZoneOverlay: document.getElementById('safeZoneOverlay'),
+
+      // Controles de Transporte
+      btnPlayPause: document.getElementById('btnPlayPause'),
+      iconPlayPause: document.getElementById('iconPlayPause'),
+      btnJumpToIn: document.getElementById('btnJumpToIn'),
+      btnJumpToOut: document.getElementById('btnJumpToOut'),
+      btnToggleLoop: document.getElementById('btnToggleLoop'),
+      currentTimeDisplay: document.getElementById('currentTimeDisplay'),
+      totalDurationDisplay: document.getElementById('totalDurationDisplay'),
+      btnMuteToggle: document.getElementById('btnMuteToggle'),
+      iconVolume: document.getElementById('iconVolume'),
+      volumeSlider: document.getElementById('volumeSlider'),
+
+      // Timeline e Sliders
+      sliderIn: document.getElementById('sliderIn'),
+      sliderOut: document.getElementById('sliderOut'),
+      selectedRangeBar: document.getElementById('selectedRangeBar'),
+      playheadNeedle: document.getElementById('playheadNeedle'),
+      inTimeLabel: document.getElementById('inTimeLabel'),
+      outTimeLabel: document.getElementById('outTimeLabel'),
+      clipDurationLabel: document.getElementById('clipDurationLabel'),
+      estimatedSizeLabel: document.getElementById('estimatedSizeLabel'),
+
+      // Entradas de Fonte
+      streamUrlInput: document.getElementById('streamUrlInput'),
+      btnLoadUrl: document.getElementById('btnLoadUrl'),
+      platformResolvedCard: document.getElementById('platformResolvedCard'),
+      platformThumbImg: document.getElementById('platformThumbImg'),
+      platformBadge: document.getElementById('platformBadge'),
+      platformModeLabel: document.getElementById('platformModeLabel'),
+      platformMediaTitle: document.getElementById('platformMediaTitle'),
+      btnCaptureEmbeddedNow: document.getElementById('btnCaptureEmbeddedNow'),
+      embedStageContainer: document.getElementById('embedStageContainer'),
+      platformEmbedIframe: document.getElementById('platformEmbedIframe'),
+      btnStageCaptureAndAutoClip: document.getElementById('btnStageCaptureAndAutoClip'),
+      btnCloseEmbedStage: document.getElementById('btnCloseEmbedStage'),
+      btnAutoGenerateClips: document.getElementById('btnAutoGenerateClips'),
+      autoClipsSuggestionsBox: document.getElementById('autoClipsSuggestionsBox'),
+      autoClipsList: document.getElementById('autoClipsList'),
+      btnCloseAutoClips: document.getElementById('btnCloseAutoClips'),
+      dropZone: document.getElementById('dropZone'),
+      localFileInput: document.getElementById('localFileInput'),
+      btnStartScreenCapture: document.getElementById('btnStartScreenCapture'),
+      btnStopScreenCapture: document.getElementById('btnStopScreenCapture'),
+      screenBufferBar: document.getElementById('screenBufferBar'),
+      captureBufferDuration: document.getElementById('captureBufferDuration'),
+      btnFreezeBuffer: document.getElementById('btnFreezeBuffer'),
+      btnResumeLiveCapture: document.getElementById('btnResumeLiveCapture'),
+
+      // Formatação & Exportação
+      verticalFramingBox: document.getElementById('verticalFramingBox'),
+      watermarkInput: document.getElementById('watermarkInput'),
+      watermarkPosition: document.getElementById('watermarkPosition'),
+      btnRenderClip: document.getElementById('btnRenderClip'),
+
+      // Legendas Estilizadas
+      captionsBadgeCount: document.getElementById('captionsBadgeCount'),
+      btnAutoTranscribe: document.getElementById('btnAutoTranscribe'),
+      labelAutoTranscribe: document.getElementById('labelAutoTranscribe'),
+      btnAddCaptionBlock: document.getElementById('btnAddCaptionBlock'),
+      btnClearCaptions: document.getElementById('btnClearCaptions'),
+      speechLiveBanner: document.getElementById('speechLiveBanner'),
+      speechInterimText: document.getElementById('speechInterimText'),
+      chkCaptionPop: document.getElementById('chkCaptionPop'),
+      captionPositionSelect: document.getElementById('captionPositionSelect'),
+      captionSizeSelect: document.getElementById('captionSizeSelect'),
+      captionsListContainer: document.getElementById('captionsListContainer'),
+      emptyCaptionsHint: document.getElementById('emptyCaptionsHint'),
+
+      // Gerador de SEO & Post
+      seoContextInput: document.getElementById('seoContextInput'),
+      btnPullContextFromCaptions: document.getElementById('btnPullContextFromCaptions'),
+      seoPlatformSelect: document.getElementById('seoPlatformSelect'),
+      seoToneSelect: document.getElementById('seoToneSelect'),
+      geminiApiKeyInput: document.getElementById('geminiApiKeyInput'),
+      geminiKeyStatusBadge: document.getElementById('geminiKeyStatusBadge'),
+      btnSaveGeminiKey: document.getElementById('btnSaveGeminiKey'),
+      btnGenerateSeo: document.getElementById('btnGenerateSeo'),
+      seoOutputBox: document.getElementById('seoOutputBox'),
+      seoTitleOutput: document.getElementById('seoTitleOutput'),
+      seoDescOutput: document.getElementById('seoDescOutput'),
+      seoTagsOutput: document.getElementById('seoTagsOutput'),
+      btnCopyAllSeo: document.getElementById('btnCopyAllSeo'),
+
+      renderProgressBox: document.getElementById('renderProgressBox'),
+      renderStatusText: document.getElementById('renderStatusText'),
+      renderPercentText: document.getElementById('renderPercentText'),
+      renderProgressBar: document.getElementById('renderProgressBar'),
+      btnCancelRender: document.getElementById('btnCancelRender'),
+
+      // Galeria & Modais
+      clipsGalleryList: document.getElementById('clipsGalleryList'),
+      emptyGalleryState: document.getElementById('emptyGalleryState'),
+      clipsCountBadge: document.getElementById('clipsCountBadge'),
+      clipPreviewModal: document.getElementById('clipPreviewModal'),
+      modalClipTitle: document.getElementById('modalClipTitle'),
+      modalVideoPlayer: document.getElementById('modalVideoPlayer'),
+      modalClipMeta: document.getElementById('modalClipMeta'),
+      modalDownloadBtn: document.getElementById('modalDownloadBtn'),
+      btnCloseModal: document.getElementById('btnCloseModal'),
+      githubDeployModal: document.getElementById('githubDeployModal'),
+      btnGithubDeployHelp: document.getElementById('btnGithubDeployHelp'),
+      btnCloseGithubModal: document.getElementById('btnCloseGithubModal'),
+      btnDownloadSourceHtml: document.getElementById('btnDownloadSourceHtml'),
+      shortcutsModal: document.getElementById('shortcutsModal'),
+      btnShortcutsHelp: document.getElementById('btnShortcutsHelp'),
+      btnCloseShortcuts: document.getElementById('btnCloseShortcuts'),
+      toastContainer: document.getElementById('toastContainer')
+    };
+
+    const previewCtx = dom.previewCanvas ? dom.previewCanvas.getContext('2d', { alpha: false }) : null;
+
+    // 3. SISTEMA DE NOTIFICAÇÕES TOAST (Sem alert/confirm nativos)
+    function showToast(message, type = 'info') {
+      const colors = {
+        success: 'border-studio-emerald/50 bg-studio-card text-white',
+        error: 'border-red-500/50 bg-studio-card text-white',
+        warning: 'border-amber-500/50 bg-studio-card text-white',
+        info: 'border-studio-purple/50 bg-studio-card text-white'
+      };
+      const icons = {
+        success: '<i data-lucide="check-circle-2" class="w-4 h-4 text-studio-emerald shrink-0"></i>',
+        error: '<i data-lucide="alert-circle" class="w-4 h-4 text-red-400 shrink-0"></i>',
+        warning: '<i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0"></i>',
+        info: '<i data-lucide="info" class="w-4 h-4 text-studio-purple shrink-0"></i>'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `toast-enter pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-2xl ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        ${icons[type] || icons.info}
+        <p class="text-xs leading-relaxed text-zinc-200 flex-1">${message}</p>
+      `;
+
+      dom.toastContainer.appendChild(toast);
+      lucide.createIcons({ root: toast });
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        toast.style.transition = 'all 0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 4200);
+    }
+
+    // 4. UTILITÁRIOS DE FORMATAÇÃO DE TEMPO E TAMANHO
+    function formatTimecode(seconds) {
+      if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) seconds = 0;
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      const tenths = Math.floor((seconds % 1) * 10);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return '0 KB';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 5. MOTOR DE ÁUDIO WEB AUDIO API (Conectado uma única vez ao elemento de vídeo)
+    function ensureAudioPipeline() {
+      try {
+        if (!state.audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          state.audioCtx = new AudioContextClass();
+          state.audioSourceNode = state.audioCtx.createMediaElementSource(dom.sourceVideo);
+          state.audioDestNode = state.audioCtx.createMediaStreamDestination();
+
+          // Conecta ao alto-falante do usuário E ao destino de gravação simultaneamente
+          state.audioSourceNode.connect(state.audioCtx.destination);
+          state.audioSourceNode.connect(state.audioDestNode);
+        }
+        if (state.audioCtx.state === 'suspended') {
+          state.audioCtx.resume();
+        }
+      } catch (err) {
+        console.warn('Pipeline de áudio WebAudio não pôde ser inicializado:', err);
+      }
+    }
+
+    // 6. MOTOR DE COMPOSIÇÃO CANVAS (Usado no Preview em Tempo Real e na Exportação)
+    function getTargetDimensions(aspectRatio) {
+      switch (aspectRatio) {
+        case '9:16':
+          return { width: 720, height: 1280 };
+        case '1:1':
+          return { width: 1080, height: 1080 };
+        case '16:9':
+        default:
+          return { width: 1280, height: 720 };
+      }
+    }
+
+    function renderCompositeFrame(ctx, videoEl, cw, ch) {
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const vw = videoEl.videoWidth;
+      const vh = videoEl.videoHeight;
+
+      if (!vw || !vh || videoEl.readyState < 2) return;
+
+      if (state.aspectRatio === '9:16' && state.verticalFit === 'blur') {
+        // 1) Fundo desfocado preenchido (Cover)
+        const coverScale = Math.max(cw / vw, ch / vh);
+        const bgW = vw * coverScale;
+        const bgH = vh * coverScale;
+        const bgX = (cw - bgW) / 2;
+        const bgY = (ch - bgH) / 2;
+
+        ctx.save();
+        ctx.filter = 'blur(26px) brightness(0.55)';
+        ctx.drawImage(videoEl, bgX, bgY, bgW, bgH);
+        ctx.restore();
+
+        // 2) Vídeo principal nítido centralizado (Contain)
+        const containScale = Math.min(cw / vw, ch / vh);
+        const fgW = vw * containScale;
+        const fgH = vh * containScale;
+        const fgX = (cw - fgW) / 2;
+        const fgY = (ch - fgH) / 2;
+
+        ctx.drawImage(videoEl, fgX, fgY, fgW, fgH);
+      } else {
+        // Modo Cover (16:9, 1:1 ou 9:16 com Zoom/Crop Centralizado)
+        const scale = Math.max(cw / vw, ch / vh);
+        const drawW = vw * scale;
+        const drawH = vh * scale;
+        const drawX = (cw - drawW) / 2;
+        const drawY = (ch - drawH) / 2;
+
+        ctx.drawImage(videoEl, drawX, drawY, drawW, drawH);
+      }
+
+      // 3) Renderiza Título / Marca d'água se preenchido
+      const text = state.watermarkText.trim();
+      if (text.length > 0) {
+        ctx.save();
+        const fontSize = Math.round(cw * 0.032);
+        ctx.font = `700 ${fontSize}px Inter, sans-serif`;
+        const metrics = ctx.measureText(text);
+        const padX = Math.round(fontSize * 0.85);
+        const padY = Math.round(fontSize * 0.5);
+        const boxW = Math.min(cw - 40, metrics.width + padX * 2);
+        const boxH = fontSize + padY * 2;
+        const boxX = (cw - boxW) / 2;
+        const boxY = state.watermarkPos === 'top'
+          ? Math.round(ch * 0.05)
+          : ch - boxH - Math.round(ch * 0.05);
+
+        // Cápsula escura translúcida
+        ctx.fillStyle = 'rgba(9, 9, 11, 0.78)';
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 12);
+        ctx.fill();
+
+        // Borda roxa sutil
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.65)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Texto branco centralizado
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, cw / 2, boxY + boxH / 2 + 1, boxW - padX);
+        ctx.restore();
+      }
+
+      // 4) Renderiza Legendas Dinâmicas Estilizadas (Burn-in) sincronizadas com o tempo do vídeo
+      const currentTimestamp = state.isMonitoringLiveScreen ? state.outTime : videoEl.currentTime;
+      drawStyledCaptionsOnCanvas(ctx, currentTimestamp, cw, ch);
+    }
+
+    // Motor de Desenho de Legendas Estilo TikTok / Reels / Hormozi no Canvas
+    function drawStyledCaptionsOnCanvas(ctx, currentTime, cw, ch) {
+      if (!state.captions || state.captions.length === 0) return;
+
+      const activeCue = state.captions.find(
+        (c) => currentTime >= c.start && currentTime <= c.end && c.text.trim().length > 0
+      );
+      if (!activeCue) return;
+
+      const rawText = activeCue.text.trim();
+      const displayText = (state.captionStyle === 'viral-yellow' || state.captionStyle === 'neon-cyber')
+        ? rawText.toUpperCase()
+        : rawText;
+
+      const sizeMultipliers = { small: 0.036, medium: 0.046, large: 0.058 };
+      const mult = sizeMultipliers[state.captionSize] || 0.046;
+      const baseDim = Math.min(cw, ch * 0.68);
+      const fontSize = Math.max(20, Math.round(baseDim * mult));
+
+      ctx.save();
+      ctx.font = `800 ${fontSize}px Inter, sans-serif`;
+      ctx.textBaseline = 'middle';
+
+      // Quebra automática em múltiplas linhas para caber perfeitamente no enquadramento
+      const maxLineWidth = cw * 0.84;
+      const words = displayText.split(/\s+/);
+      const lines = [];
+      let currentLine = '';
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(testLine).width > maxLineWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+    // MODO 1: Analisador Inteligente de Links (YouTube, Twitch, Kick, HLS .m3u8 e MP4)
+    function parsePlatformFromUrl(rawUrl) {
+      const url = rawUrl.trim();
+      try {
+        const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+        const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+
+        // 1. YouTube (watch, live, shorts, youtu.be)
+        if (host.includes('youtube.com') || host === 'youtu.be') {
+          let videoId = '';
+          if (host === 'youtu.be') {
+            videoId = parsed.pathname.slice(1).split('/')[0];
+          } else if (parsed.pathname.startsWith('/shorts/')) {
+            videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0];
+          } else if (parsed.pathname.startsWith('/live/')) {
+            videoId = parsed.pathname.split('/live/')[1]?.split('/')[0];
+          } else {
+            videoId = parsed.searchParams.get('v') || '';
+          }
+          if (videoId) {
+            return { platform: 'youtube', id: videoId, cleanUrl: `https://www.youtube.com/watch?v=${videoId}` };
+          }
+        }
+
+        // 2. Twitch (canal ao vivo ou VOD /videos/id)
+        if (host.includes('twitch.tv')) {
+          const parts = parsed.pathname.split('/').filter(Boolean);
+          if (parts[0] === 'videos' && parts[1]) {
+            return { platform: 'twitch-vod', id: parts[1], cleanUrl: `https://www.twitch.tv/videos/${parts[1]}` };
+          }
+          if (parts[0] && !['directory', 'downloads', 'jobs', 'turbo'].includes(parts[0])) {
+            return { platform: 'twitch', id: parts[0], cleanUrl: `https://www.twitch.tv/${parts[0]}` };
+          }
+        }
+
+        // 3. Kick (canal ao vivo)
+        if (host.includes('kick.com')) {
+          const parts = parsed.pathname.split('/').filter(Boolean);
+          if (parts[0]) {
+            return { platform: 'kick', id: parts[0], cleanUrl: `https://kick.com/${parts[0]}` };
+          }
+        }
+
+        return { platform: 'direct', id: null, cleanUrl: parsed.href };
+      } catch (_) {
+        return { platform: 'direct', id: null, cleanUrl: url };
+      }
+    }
+
+    function openPlatformEmbedStage(platformInfo, titleText, thumbUrl = '') {
+      dom.emptyPlayerPlaceholder.classList.add('hidden');
+      dom.embedStageContainer.classList.remove('hidden');
+
+      dom.platformResolvedCard.classList.remove('hidden');
+      dom.platformMediaTitle.textContent = titleText;
+
+      if (thumbUrl) {
+        dom.platformThumbImg.src = thumbUrl;
+        dom.platformThumbImg.style.display = 'block';
+      } else {
+        dom.platformThumbImg.style.display = 'none';
+      }
+
+      const parentHost = window.location.hostname || 'localhost';
+      let embedSrc = '';
+
+      if (platformInfo.platform === 'youtube') {
+        dom.platformBadge.textContent = 'YOUTUBE';
+        dom.platformBadge.className = 'text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30';
+        embedSrc = `https://www.youtube.com/embed/${platformInfo.id}?autoplay=1&rel=0`;
+      } else if (platformInfo.platform === 'twitch') {
+        dom.platformBadge.textContent = 'TWITCH LIVE';
+        dom.platformBadge.className = 'text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30';
+        embedSrc = `https://player.twitch.tv/?channel=${platformInfo.id}&parent=${parentHost}&autoplay=true`;
+      } else if (platformInfo.platform === 'twitch-vod') {
+        dom.platformBadge.textContent = 'TWITCH VOD';
+        dom.platformBadge.className = 'text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30';
+        embedSrc = `https://player.twitch.tv/?video=${platformInfo.id}&parent=${parentHost}&autoplay=true`;
+      } else if (platformInfo.platform === 'kick') {
+        dom.platformBadge.textContent = 'KICK LIVE';
+        dom.platformBadge.className = 'text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        embedSrc = `https://player.kick.com/${platformInfo.id}?autoplay=true`;
+      }
+
+      dom.platformEmbedIframe.src = embedSrc;
+      updateMediaBadges(platformInfo.platform !== 'twitch-vod', titleText);
+      showToast('Player oficial carregado! Clique em "Capturar Aba & Gerar Clipes" para gravar e cortar sem bloqueio CORS.', 'info');
+    }
+
+    async function loadUrlSource(url, forceLiveBadge = null, customLabel = null) {
+      if (!url || !url.trim()) {
+        showToast('Por favor, insira uma URL válida do YouTube, Twitch, Kick ou .m3u8.', 'warning');
+        return;
+      }
+
+      stopScreenCapture(true);
+      cleanupPreviousMedia();
+      dom.embedStageContainer.classList.add('hidden');
+      dom.platformEmbedIframe.src = 'about:blank';
+
+      const info = parsePlatformFromUrl(url);
+
+      // Caso 1: YouTube ou Twitch -> Busca metadados via oEmbed (CORS liberado) e abre Player Oficial + Captura 1-Clique
+      if (info.platform === 'youtube' || info.platform === 'twitch' || info.platform === 'twitch-vod') {
+        let fetchedTitle = customLabel || `${info.platform.toUpperCase()} • ${info.id}`;
+        let thumb = info.platform === 'youtube' ? `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg` : '';
+
+        try {
+          const oembedRes = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(info.cleanUrl)}`);
+          if (oembedRes.ok) {
+            const meta = await oembedRes.json();
+            if (meta.title) fetchedTitle = meta.title;
+            if (meta.thumbnail_url) thumb = meta.thumbnail_url;
+          }
+        } catch (_) {}
+
+        openPlatformEmbedStage(info, fetchedTitle, thumb);
+        return;
+      }
+
+      // Caso 2: Kick -> Tenta extrair o stream .m3u8 ao vivo via API pública da Kick; se falhar, abre Player Kick
+      if (info.platform === 'kick') {
+        showToast(`Conectando ao canal ${info.id} na Kick...`, 'info');
+        try {
+          const kickApiUrl = `https://kick.com/api/v2/channels/${encodeURIComponent(info.id)}`;
+          let res = await fetch(kickApiUrl).catch(() => null);
+          if (!res || !res.ok) {
+            res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(kickApiUrl)}`).catch(() => null);
+          }
+          if (res && res.ok) {
+            const data = await res.json();
+            const playbackUrl = data?.playback_url || data?.livestream?.playback_url;
+            const streamTitle = data?.livestream?.session_title || `Kick Live: ${info.id}`;
+            if (playbackUrl) {
+              dom.platformResolvedCard.classList.add('hidden');
+              loadDirectStreamUrl(playbackUrl, true, streamTitle);
+              return;
+            }
+          }
+        } catch (_) {}
+
+        openPlatformEmbedStage(info, `Kick Live: ${info.id}`);
+        return;
+      }
+
+      // Caso 3: Link direto (.m3u8 ou .mp4 / .webm)
+      dom.platformResolvedCard.classList.add('hidden');
+      loadDirectStreamUrl(info.cleanUrl, forceLiveBadge, customLabel);
+    }
+
+    function loadDirectStreamUrl(cleanUrl, forceLiveBadge = null, customLabel = null) {
+      const isHls = cleanUrl.toLowerCase().includes('.m3u8');
+      const label = customLabel || cleanUrl.split('/').pop().split('?')[0] || 'Stream Externa';
+
+      dom.sourceVideo.crossOrigin = 'anonymous';
+      ensureAudioPipeline();
+
+      if (isHls && window.Hls && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90
+        });
+        state.hlsInstance = hls;
+        hls.loadSource(cleanUrl);
+        hls.attachMedia(dom.sourceVideo);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          const isLiveStream = forceLiveBadge !== null ? forceLiveBadge : true;
+          updateMediaBadges(isLiveStream, label);
+          dom.sourceVideo.play().catch(() => {});
+          showToast(`Stream HLS carregada: ${label}`, 'success');
+        });
+
+        hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
+          if (dom.sourceVideo.seekable && dom.sourceVideo.seekable.length > 0) {
+            const sStart = dom.sourceVideo.seekable.start(0);
+            const sEnd = dom.sourceVideo.seekable.end(dom.sourceVideo.seekable.length - 1);
+            if (state.maxTime === 0) {
+              initializeTimelineBounds(sStart, sEnd, 15);
+            } else {
+              const wasAtEdge = Math.abs(state.outTime - state.maxTime) < 1.2;
+              state.minTime = sStart;
+              state.maxTime = sEnd;
+              if (wasAtEdge && data.details && data.details.live) {
+                const span = state.outTime - state.inTime;
+                state.outTime = sEnd;
+                state.inTime = Math.max(sStart, sEnd - span);
+              }
+              syncTimelineUI();
+            }
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            showToast('Servidor bloqueou acesso direto (CORS). Use a aba "Capturar Aba Ao Vivo" para gravar sem restrições!', 'error');
+            hls.destroy();
+          }
+        });
+      } else {
+        dom.sourceVideo.src = cleanUrl;
+        dom.sourceVideo.onloadedmetadata = () => {
+          const isLiveStream = forceLiveBadge !== null ? forceLiveBadge : !isFinite(dom.sourceVideo.duration);
+          updateMediaBadges(isLiveStream, label);
+          initializeTimelineBounds(0, dom.sourceVideo.duration || 30, 15);
+          dom.sourceVideo.play().catch(() => {});
+          showToast(`Vídeo carregado: ${label}`, 'success');
+        };
+        dom.sourceVideo.onerror = () => {
+          showToast('Servidor bloqueou CORS direto. Use a aba "Capturar Aba Ao Vivo".', 'error');
+        };
+      }
+    }
+
+    // MODO 2: Carregar Arquivo Local
+    function loadLocalFile(file) {
+      if (!file) return;
+      if (!file.type.startsWith('video/')) {
+        showToast('Selecione um arquivo de vídeo válido (MP4, WebM ou MOV).', 'warning');
+        return;
+      }
+
+      stopScreenCapture(true);
+      cleanupPreviousMedia();
+      ensureAudioPipeline();
+
+      const objectUrl = URL.createObjectURL(file);
+      dom.sourceVideo.removeAttribute('crossOrigin');
+      dom.sourceVideo.src = objectUrl;
+
+      dom.sourceVideo.onloadedmetadata = () => {
+        updateMediaBadges(false, file.name);
+        initializeTimelineBounds(0, dom.sourceVideo.duration, 15);
+        dom.sourceVideo.play().catch(() => {});
+        showToast(`Arquivo local pronto: ${file.name}`, 'success');
+      };
+    }
+
+    // MODO 3: Captura de Aba / Tela ao Vivo com Buffer Circular (Zero CORS)
+    async function startScreenCapture(preferCurrent = false) {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+          showToast('Seu navegador não suporta captura de tela/aba.', 'error');
+          return;
+        }
+
+        const displayOptions = {
+          video: { frameRate: { ideal: 30 } },
+          audio: true
+        };
+        if (preferCurrent) {
+          displayOptions.preferCurrentTab = true;
+        }
+
+        const stream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+
+        // Se estava no player embed, oculta o iframe e exibe o Canvas compositor ao vivo
+        dom.embedStageContainer.classList.add('hidden');
+        cleanupPreviousMedia();
+        stopScreenCapture(true);
+
+        state.screenStream = stream;
+        state.screenChunks = [];
+        state.screenStartTime = Date.now();
+        state.isMonitoringLiveScreen = true;
+
+        // Exibe o sinal ao vivo no player
+        dom.liveMonitorVideo.srcObject = stream;
+        await dom.liveMonitorVideo.play();
+
+        const trackLabel = stream.getVideoTracks()[0]?.label || 'Aba Capturada Ao Vivo';
+        updateMediaBadges(true, `Ao Vivo: ${trackLabel}`);
+
+        // Inicia gravação contínua em blocos de 1s no buffer circular em RAM
+        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+          ? 'video/webm;codecs=vp9,opus'
+          : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+
+        state.screenMimeType = mime;
+        const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        state.screenRecorder = recorder;
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            state.screenChunks.push(e.data);
+          }
+        };
+        recorder.start(1000);
+
+        // Atualiza UI do Buffer Ao Vivo
+        dom.btnStartScreenCapture.classList.add('hidden');
+        dom.btnStopScreenCapture.classList.remove('hidden');
+        dom.screenBufferBar.classList.remove('hidden');
+        dom.btnResumeLiveCapture.classList.add('hidden');
+
+        state.screenTimerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - state.screenStartTime) / 1000);
+          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const secs = String(elapsed % 60).padStart(2, '0');
+          dom.captureBufferDuration.textContent = `${mins}:${secs}`;
+          if (state.isMonitoringLiveScreen) {
+            dom.totalDurationDisplay.textContent = `${mins}:${secs}.0`;
+            dom.currentTimeDisplay.textContent = `${mins}:${secs}.0`;
+          }
+        }, 500);
+
+        // Caso o usuário encerre o compartilhamento pela barra nativa do navegador
+        stream.getVideoTracks()[0].onended = () => {
+          stopScreenCapture(false);
+        };
+
+        showToast('Captura ao vivo iniciada! Clique em "Congelar Buffer & Clipar" quando acontecer a jogada.', 'success');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          showToast('Captura cancelada ou permissão negada.', 'warning');
+        }
+      }
+    }
+
+    function freezeScreenBufferForClipping(quickLastSeconds = null) {
+      if (!state.screenChunks.length) {
+        showToast('Aguarde pelo menos 2 segundos de captura para acumular buffer.', 'warning');
+        return;
+      }
+
+      const bufferBlob = new Blob(state.screenChunks, { type: state.screenMimeType || 'video/webm' });
+      const bufferUrl = URL.createObjectURL(bufferBlob);
+
+      state.isMonitoringLiveScreen = false;
+      ensureAudioPipeline();
+
+      dom.sourceVideo.removeAttribute('crossOrigin');
+      dom.sourceVideo.src = bufferUrl;
+      dom.sourceVideo.onloadedmetadata = () => {
+        const dur = dom.sourceVideo.duration;
+        // Alguns navegadores retornam Infinity inicialmente em WebM gravado; corrige buscando o fim
+        if (!isFinite(dur) || dur === 0) {
+          dom.sourceVideo.currentTime = 1e9;
+          dom.sourceVideo.ontimeupdate = () => {
+            dom.sourceVideo.ontimeupdate = null;
+            const realDur = dom.sourceVideo.duration;
+            initializeTimelineBounds(0, realDur, quickLastSeconds || 15);
+            dom.sourceVideo.currentTime = state.inTime;
+            dom.sourceVideo.play().catch(() => {});
+          };
+        } else {
+          initializeTimelineBounds(0, dur, quickLastSeconds || 15);
+          dom.sourceVideo.currentTime = state.inTime;
+          dom.sourceVideo.play().catch(() => {});
+        }
+
+        if (state.screenStream) {
+          dom.btnResumeLiveCapture.classList.remove('hidden');
+        }
+        showToast('Buffer congelado! Ajuste o corte na timeline e exporte seu clipe.', 'info');
+      };
+    }
+
+    function resumeLiveScreenMonitoring() {
+      if (!state.screenStream) return;
+      state.isMonitoringLiveScreen = true;
+      dom.sourceVideo.pause();
+      dom.btnResumeLiveCapture.classList.add('hidden');
+      showToast('Retornou ao sinal ao vivo da aba capturada.', 'info');
+    }
+
+    function stopScreenCapture(silent = false) {
+      if (state.screenTimerInterval) {
+        clearInterval(state.screenTimerInterval);
+        state.screenTimerInterval = null;
+      }
+      if (state.screenRecorder && state.screenRecorder.state !== 'inactive') {
+        try { state.screenRecorder.stop(); } catch (_) {}
+      }
+      if (state.screenStream) {
+        state.screenStream.getTracks().forEach(t => t.stop());
+        state.screenStream = null;
+      }
+      state.isMonitoringLiveScreen = false;
+      dom.btnStartScreenCapture.classList.remove('hidden');
+      dom.btnStopScreenCapture.classList.add('hidden');
+      dom.screenBufferBar.classList.add('hidden');
+
+      if (!silent) {
+        showToast('Captura de aba encerrada.', 'info');
+      }
+    }
+
+    // 8. CONTROLES DA TIMELINE, SLIDERS DUPLOS E PLAYBACK
+    function syncTimelineUI() {
+      const range = Math.max(0.1, state.maxTime - state.minTime);
+
+      // Garante limites válidos
+      state.inTime = Math.max(state.minTime, Math.min(state.inTime, state.outTime - 0.5));
+      state.outTime = Math.min(state.maxTime, Math.max(state.outTime, state.inTime + 0.5));
+
+      dom.sliderIn.min = state.minTime;
+      dom.sliderIn.max = state.maxTime;
+      dom.sliderIn.value = state.inTime;
+
+      dom.sliderOut.min = state.minTime;
+      dom.sliderOut.max = state.maxTime;
+      dom.sliderOut.value = state.outTime;
+
+      const leftPct = ((state.inTime - state.minTime) / range) * 100;
+      const rightPct = ((state.outTime - state.minTime) / range) * 100;
+
+      dom.selectedRangeBar.style.left = `${Math.max(0, leftPct)}%`;
+      dom.selectedRangeBar.style.width = `${Math.max(0, rightPct - leftPct)}%`;
+
+      const clipDur = Math.max(0, state.outTime - state.inTime);
+      dom.inTimeLabel.textContent = formatTimecode(state.inTime);
+      dom.outTimeLabel.textContent = formatTimecode(state.outTime);
+      dom.clipDurationLabel.textContent = `${clipDur.toFixed(1)}s`;
+
+      // Estimativa de tamanho (~2.5 Mbps -> ~0.31 MB/s)
+      const estBytes = clipDur * 320 * 1024;
+      dom.estimatedSizeLabel.textContent = `~${formatBytes(estBytes)}`;
+      dom.totalDurationDisplay.textContent = formatTimecode(state.maxTime);
+    }
+
+    function updatePlayheadAndLoop() {
+      if (!state.hasMedia || state.isMonitoringLiveScreen || state.isRendering) return;
+
+      const cur = dom.sourceVideo.currentTime;
+      dom.currentTimeDisplay.textContent = formatTimecode(cur);
+
+      const range = Math.max(0.1, state.maxTime - state.minTime);
+      const pct = Math.min(100, Math.max(0, ((cur - state.minTime) / range) * 100));
+      dom.playheadNeedle.style.left = `${pct}%`;
+
+      // Loop automático dentro do trecho selecionado [inTime, outTime]
+      if (state.loopClip && !dom.sourceVideo.paused && cur >= state.outTime) {
+        dom.sourceVideo.currentTime = state.inTime;
+      }
+    }
+
+    // 9. MOTOR DE EXPORTAÇÃO E RENDERIZAÇÃO 100% CLIENT-SIDE (CANVAS + MEDIARECORDER)
+    async function renderAndExportClip() {
+      if (!state.hasMedia) {
+        showToast('Carregue uma live ou vídeo antes de exportar.', 'warning');
+        return;
+      }
+
+      // Se estiver monitorando a captura de tela ao vivo, congela automaticamente o buffer antes de renderizar
+      if (state.isMonitoringLiveScreen) {
+        freezeScreenBufferForClipping(15);
+        showToast('Buffer congelado! Clique novamente em "Gerar & Exportar Clipe" após conferir o corte.', 'info');
+        return;
+      }
+
+      if (state.isRendering) return;
+
+      const duration = state.outTime - state.inTime;
+      if (duration < 0.5) {
+        showToast('O clipe precisa ter pelo menos 0.5 segundo de duração.', 'warning');
+        return;
+      }
+
+      state.isRendering = true;
+      state.cancelRenderFlag = false;
+      ensureAudioPipeline();
+
+      // Atualiza UI para modo renderização
+      dom.btnRenderClip.disabled = true;
+      dom.btnRenderClip.classList.add('opacity-50', 'cursor-not-allowed');
+      dom.renderProgressBox.classList.remove('hidden');
+      dom.renderProgressBar.style.width = '0%';
+      dom.renderPercentText.textContent = '0%';
+      dom.renderStatusText.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Preparando quadros...';
+      lucide.createIcons({ root: dom.renderProgressBox });
+
+      const { width, height } = getTargetDimensions(state.aspectRatio);
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = width;
+      exportCanvas.height = height;
+      const exportCtx = exportCanvas.getContext('2d', { alpha: false });
+
+      // Posiciona vídeo no ponto exato de início (In)
+      dom.sourceVideo.pause();
+      dom.sourceVideo.currentTime = state.inTime;
+
+      await new Promise((resolve) => {
+        const onSeeked = () => {
+          dom.sourceVideo.removeEventListener('seeked', onSeeked);
+          resolve();
+        };
+        dom.sourceVideo.addEventListener('seeked', onSeeked);
+      });
+
+      // Combina trilha de vídeo do Canvas (30 FPS) + trilha de áudio da Web Audio API
+      const canvasStream = exportCanvas.captureStream(30);
+      const combinedTracks = [...canvasStream.getVideoTracks()];
+
+      if (state.audioDestNode && state.audioDestNode.stream.getAudioTracks().length > 0) {
+        combinedTracks.push(...state.audioDestNode.stream.getAudioTracks());
+      }
+
+      const finalStream = new MediaStream(combinedTracks);
+
+      // Seleciona melhor codec suportado pelo navegador
+      const candidates = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+      ];
+      const chosenMime = candidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      const fileExt = chosenMime.includes('mp4') ? 'mp4' : 'webm';
+
+      const recorder = chosenMime
+        ? new MediaRecorder(finalStream, { mimeType: chosenMime, videoBitsPerSecond: 4_500_000 })
+        : new MediaRecorder(finalStream, { videoBitsPerSecond: 4_500_000 });
+
+      state.activeRecorder = recorder;
+      const recordedChunks = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        state.isRendering = false;
+        state.activeRecorder = null;
+        dom.btnRenderClip.disabled = false;
+        dom.btnRenderClip.classList.remove('opacity-50', 'cursor-not-allowed');
+        dom.renderProgressBox.classList.add('hidden');
+        dom.sourceVideo.pause();
+
+        if (state.cancelRenderFlag) {
+          showToast('Renderização cancelada.', 'warning');
+          return;
+        }
+
+        const finalBlob = new Blob(recordedChunks, { type: chosenMime || 'video/webm' });
+        const clipUrl = URL.createObjectURL(finalBlob);
+        const clipTitle = state.watermarkText.trim() || `Clipe ${state.aspectRatio} #${state.clips.length + 1}`;
+
+        const clipObj = {
+          id: Date.now(),
+          title: clipTitle,
+          url: clipUrl,
+          size: finalBlob.size,
+          duration: duration,
+          aspectRatio: state.aspectRatio,
+          ext: fileExt,
+          createdAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        state.clips.unshift(clipObj);
+        renderClipsGallery();
+        showToast(`Clipe "${clipTitle}" pronto (${formatBytes(finalBlob.size)})!`, 'success');
+      };
+
+      // Inicia gravação e reprodução controlada até outTime
+      recorder.start(200);
+      await dom.sourceVideo.play();
+
+      function renderStep() {
+        if (!state.isRendering) return;
+
+        if (state.cancelRenderFlag) {
+          recorder.stop();
+          return;
+        }
+
+        const cur = dom.sourceVideo.currentTime;
+        const pct = Math.min(100, Math.max(0, ((cur - state.inTime) / duration) * 100));
+
+        dom.renderProgressBar.style.width = `${pct.toFixed(0)}%`;
+        dom.renderPercentText.textContent = `${pct.toFixed(0)}%`;
+        dom.renderStatusText.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Gravando quadro (${formatTimecode(cur - state.inTime)} / ${formatTimecode(duration)})`;
+
+        // Desenha no canvas de exportação E mantém o preview sincronizado
+        renderCompositeFrame(exportCtx, dom.sourceVideo, width, height);
+        renderCompositeFrame(previewCtx, dom.sourceVideo, dom.previewCanvas.width, dom.previewCanvas.height);
+
+        if (cur >= state.outTime || dom.sourceVideo.ended) {
+          dom.renderProgressBar.style.width = '100%';
+          dom.renderPercentText.textContent = '100%';
+          setTimeout(() => {
+            if (recorder.state !== 'inactive') recorder.stop();
+          }, 120);
+          return;
+        }
+
+        requestAnimationFrame(renderStep);
+      }
+
+      requestAnimationFrame(renderStep);
+    }
+
+    // 10. GALERIA DE CLIPES DA SESSÃO & MODAL DE VISUALIZAÇÃO
+    function renderClipsGallery() {
+      dom.clipsCountBadge.textContent = `${state.clips.length} ${state.clips.length === 1 ? 'clipe' : 'clipes'}`;
+
+      if (state.clips.length === 0) {
+        dom.clipsGalleryList.innerHTML = '';
+        dom.clipsGalleryList.appendChild(dom.emptyGalleryState);
+        dom.emptyGalleryState.classList.remove('hidden');
+        return;
+      }
+
+      dom.emptyGalleryState.classList.add('hidden');
+      dom.clipsGalleryList.innerHTML = '';
+
+      state.clips.forEach((clip) => {
+        const card = document.createElement('div');
+        card.className = 'bg-studio-bg border border-studio-border hover:border-studio-purple/50 rounded-xl p-3 transition flex flex-col gap-2.5';
+        const safeFilename = `${clip.title.replace(/[^a-z0-9-_]/gi, '_').toLowerCase()}.${clip.ext}`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-studio-purple/20 text-studio-purple border border-studio-purple/30">${clip.aspectRatio}</span>
+                <span class="text-[10px] font-mono text-zinc-500">${clip.createdAt}</span>
+              </div>
+              <h4 class="text-xs font-bold text-white truncate mt-1">${clip.title}</h4>
+            </div>
+            <button type="button" data-delete-clip="${clip.id}" title="Remover Clipe" class="p-1.5 rounded-lg hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400 bg-studio-card px-2.5 py-1.5 rounded-lg border border-studio-border">
+            <span>Duração: <strong class="text-white">${clip.duration.toFixed(1)}s</strong></span>
+            <span>Tamanho: <strong class="text-studio-emerald">${formatBytes(clip.size)}</strong></span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-preview-clip="${clip.id}" class="py-2 px-3 rounded-lg bg-studio-elevated hover:bg-zinc-800 border border-studio-border text-xs font-semibold text-white flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5 text-studio-purple"></i>
+              <span>Assistir</span>
+            </button>
+            <a href="${clip.url}" download="${safeFilename}" class="py-2 px-3 rounded-lg bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Baixar .${clip.ext}</span>
+            </a>
+          </div>
+        `;
+
+        dom.clipsGalleryList.appendChild(card);
+      });
+
+      lucide.createIcons({ root: dom.clipsGalleryList });
+    }
+
+    function openClipModal(clipId) {
+      const clip = state.clips.find(c => c.id === Number(clipId));
+      if (!clip) return;
+
+      const safeFilename = `${clip.title.replace(/[^a-z0-9-_]/gi, '_').toLowerCase()}.${clip.ext}`;
+      dom.modalClipTitle.textContent = clip.title;
+      dom.modalVideoPlayer.src = clip.url;
+      dom.modalClipMeta.textContent = `${clip.aspectRatio} • ${clip.duration.toFixed(1)}s • ${formatBytes(clip.size)}`;
+      dom.modalDownloadBtn.href = clip.url;
+      dom.modalDownloadBtn.download = safeFilename;
+
+      dom.clipPreviewModal.classList.remove('hidden');
+      dom.modalVideoPlayer.play().catch(() => {});
+    }
+
+    // 10B. MOTOR DE LEGENDAS ESTILIZADAS & AUTO-TRANSCRIÇÃO POR VOZ (WEB SPEECH API)
+    function renderCaptionsListUI() {
+      const count = state.captions.length;
+      dom.captionsBadgeCount.textContent = count;
+      dom.captionsBadgeCount.classList.toggle('hidden', count === 0);
+
+      if (count === 0) {
+        dom.captionsListContainer.innerHTML = '';
+        dom.captionsListContainer.appendChild(dom.emptyCaptionsHint);
+        dom.emptyCaptionsHint.classList.remove('hidden');
+        return;
+      }
+
+      dom.emptyCaptionsHint.classList.add('hidden');
+      dom.captionsListContainer.innerHTML = '';
+
+      // Ordena cronologicamente
+      state.captions.sort((a, b) => a.start - b.start);
+
+      state.captions.forEach((cue) => {
+        const item = document.createElement('div');
+        item.className = 'bg-studio-bg border border-studio-border rounded-xl p-2.5 space-y-2';
+        item.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 font-mono text-[11px]">
+              <input type="number" step="0.1" min="0" value="${cue.start.toFixed(1)}" data-cap-start="${cue.id}" class="w-14 bg-studio-card border border-studio-border rounded px-1.5 py-0.5 text-studio-purple text-center outline-none" title="Início (s)" />
+              <span class="text-zinc-500">→</span>
+              <input type="number" step="0.1" min="0" value="${cue.end.toFixed(1)}" data-cap-end="${cue.id}" class="w-14 bg-studio-card border border-studio-border rounded px-1.5 py-0.5 text-studio-emerald text-center outline-none" title="Fim (s)" />
+              <span class="text-zinc-500">s</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button type="button" data-cap-seek="${cue.id}" title="Ir para este trecho" class="p-1 rounded hover:bg-studio-elevated text-zinc-400 hover:text-white">
+                <i data-lucide="play" class="w-3 h-3"></i>
+              </button>
+              <button type="button" data-cap-del="${cue.id}" title="Remover legenda" class="p-1 rounded hover:bg-red-500/15 text-zinc-400 hover:text-red-400">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+          <input type="text" value="${cue.text.replace(/"/g, '&quot;')}" data-cap-text="${cue.id}" placeholder="Digite o texto da legenda..." class="w-full bg-studio-card border border-studio-border focus:border-studio-purple rounded-lg px-2.5 py-1.5 text-xs text-white outline-none" />
+        `;
+        dom.captionsListContainer.appendChild(item);
+      });
+
+      lucide.createIcons({ root: dom.captionsListContainer });
+    }
+
+    function addManualCaptionBlock() {
+      const baseStart = state.hasMedia && !state.isMonitoringLiveScreen
+        ? Math.max(state.inTime, Math.min(dom.sourceVideo.currentTime, state.outTime - 1))
+        : state.inTime;
+      const baseEnd = Math.min(state.maxTime || (baseStart + 3), baseStart + 2.5);
+
+      state.captions.push({
+        id: Date.now() + Math.random(),
+        start: Number(baseStart.toFixed(1)),
+        end: Number(Math.max(baseStart + 0.8, baseEnd).toFixed(1)),
+        text: 'MOMENTO ÉPICO AO VIVO!'
+      });
+
+      renderCaptionsListUI();
+      showToast('Bloco de legenda adicionado ao clipe.', 'info');
+    }
+
+    function toggleAutoSpeechTranscription() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        showToast('Seu navegador não suporta reconhecimento de voz nativo. Use Chrome/Edge ou adicione legendas manualmente.', 'warning');
+        return;
+      }
+
+      if (state.isTranscribing && state.recognitionInstance) {
+        state.isTranscribing = false;
+        state.recognitionInstance.stop();
+        dom.speechLiveBanner.classList.add('hidden');
+        dom.labelAutoTranscribe.textContent = 'Auto-Legenda Voz';
+        dom.btnAutoTranscribe.classList.remove('bg-red-500/20', 'border-red-500/50', 'text-red-300');
+        dom.btnAutoTranscribe.classList.add('bg-studio-emerald/15', 'border-studio-emerald/40', 'text-studio-emerald');
+        showToast('Transcrição por voz encerrada.', 'info');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      let segmentStartTime = state.hasMedia && !state.isMonitoringLiveScreen
+        ? dom.sourceVideo.currentTime
+        : state.inTime;
+
+      recognition.onstart = () => {
+        state.isTranscribing = true;
+        state.recognitionInstance = recognition;
+        dom.speechLiveBanner.classList.remove('hidden');
+        dom.labelAutoTranscribe.textContent = 'Parar Escuta';
+        dom.btnAutoTranscribe.classList.remove('bg-studio-emerald/15', 'border-studio-emerald/40', 'text-studio-emerald');
+        dom.btnAutoTranscribe.classList.add('bg-red-500/20', 'border-red-500/50', 'text-red-300');
+        showToast('Microfone ativo! Fale ou reproduza o áudio nos alto-falantes para legendar.', 'success');
+      };
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.trim();
+          if (event.results[i].isFinal && transcript.length > 0) {
+            const nowTime = state.hasMedia && !state.isMonitoringLiveScreen
+              ? dom.sourceVideo.currentTime
+              : Math.min(state.outTime, segmentStartTime + Math.max(1.5, transcript.split(' ').length * 0.42));
+
+            const startT = Math.max(state.minTime, Math.min(segmentStartTime, nowTime - 0.6));
+            const endT = Math.max(startT + 1.0, nowTime);
+
+            state.captions.push({
+              id: Date.now() + Math.random(),
+              start: Number(startT.toFixed(1)),
+              end: Number(endT.toFixed(1)),
+              text: transcript
+            });
+            renderCaptionsListUI();
+            segmentStartTime = endT;
+            dom.speechInterimText.textContent = 'Ouvindo próximo trecho...';
+          } else {
+            interim += transcript + ' ';
+          }
+        }
+        if (interim.trim()) {
+          dom.speechInterimText.textContent = interim.trim();
+        }
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error === 'not-allowed') {
+          showToast('Permissão de microfone negada no navegador.', 'error');
+        }
+      };
+
+      recognition.onend = () => {
+        if (state.isTranscribing) {
+          try { recognition.start(); } catch (_) {}
+        }
+      };
+
+      recognition.start();
+    }
+
+    // 10C. GERADOR DE TÍTULO, DESCRIÇÃO E HASHTAGS (MOTOR HÍBRIDO OFFLINE + GEMINI FREE)
+    function updateGeminiKeyBadge() {
+      if (state.geminiApiKey && state.geminiApiKey.trim().length > 10) {
+        dom.geminiKeyStatusBadge.textContent = 'Gemini IA Ativo';
+        dom.geminiKeyStatusBadge.className = 'text-[10px] font-mono text-studio-emerald font-bold';
+        dom.geminiApiKeyInput.value = state.geminiApiKey;
+      } else {
+        dom.geminiKeyStatusBadge.textContent = 'Modo Offline';
+        dom.geminiKeyStatusBadge.className = 'text-[10px] font-mono text-zinc-500';
+      }
+    }
+
+    function generateOfflineViralSeo(context, platform, tone) {
+      const cleanTopic = context.trim() || state.sourceName || 'Momento épico ao vivo';
+      const shortTopic = cleanTopic.length > 52 ? cleanTopic.slice(0, 49) + '...' : cleanTopic;
+
+      const titleTemplates = {
+        epic: [
+          `NINGUÉM ACREDITOU NISSO AO VIVO! 😱 (${shortTopic})`,
+          `O MOMENTO MAIS INSANO DA LIVE 🔥 ${shortTopic}`,
+          `IMPOSSÍVEL FAZER ISSO DE NOVO! 🤯 ${shortTopic}`
+        ],
+        funny: [
+          `EU NÃO TANKO ESSE CORTE KKKKK 😂 (${shortTopic})`,
+          `A REAÇÃO NO FINAL FOI TUDO 💀 ${shortTopic}`,
+          `QUANDO TUDO DÁ ERRADO AO VIVO 🤣 ${shortTopic}`
+        ],
+        podcast: [
+          `A VERDADE QUE NINGUÉM FALA SOBRE ${shortTopic.toUpperCase()} 🎙️`,
+          `ESSE CORTE MUDOU MINHA VISÃO! 💡 ${shortTopic}`,
+          `PRESTA ATENÇÃO NISSO AQUI 👇 ${shortTopic}`
+        ],
+        tips: [
+          `COMO FAZER ISSO EM SEGUNDOS ⚡ (${shortTopic})`,
+          `O SEGREDO QUE POUCOS SABEM: ${shortTopic} 🚀`,
+          `SALVA ESSE VÍDEO ANTES DE ESQUECER 📌 ${shortTopic}`
+        ]
+      };
+
+      const pool = titleTemplates[tone] || titleTemplates.epic;
+      const chosenTitle = pool[Math.floor(Math.random() * pool.length)];
+
+      const platformCta = {
+        shorts: 'Se inscreve no canal para mais cortes diários da live! 🔔\nQual nota você dá para esse momento de 0 a 10? Comenta aí 👇',
+        tiktok: 'Segue o perfil para não perder os próximos cortes ao vivo! 🔥\nMarca aquele amigo que precisa ver isso 👇',
+        reels: 'Salva esse Reels e compartilha nos Stories! 🚀\nO que você achou disso? Deixa nos comentários 👇'
+      };
+
+      const description = `${cleanTopic}\n\n${platformCta[platform] || platformCta.shorts}`;
+
+      // Extrai palavras-chave relevantes do contexto para compor hashtags dinâmicas
+      const stopWords = new Set(['para', 'com', 'que', 'uma', 'como', 'mais', 'isso', 'sobre', 'live', 'ao', 'vivo', 'clip', 'clipe']);
+      const keywords = cleanTopic
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !stopWords.has(w))
+        .slice(0, 4)
+        .map(w => `#${w}`);
+
+      const baseTags = {
+        shorts: ['#shorts', '#cortes', '#aovivo', '#viral', '#clips'],
+        tiktok: ['#fyp', '#foryou', '#cortesdelive', '#viralbrasil', '#fy'],
+        reels: ['#reels', '#reelsbrasil', '#explorar', '#cortes', '#viral']
+      };
+
+      const hashtags = Array.from(new Set([...keywords, ...(baseTags[platform] || baseTags.shorts)])).join(' ');
+
+      return { title: chosenTitle, description, hashtags };
+    }
+
+    async function handleGenerateSeo() {
+      const context = dom.seoContextInput.value.trim();
+      const platform = dom.seoPlatformSelect.value;
+      const tone = dom.seoToneSelect.value;
+
+      const originalBtnHtml = dom.btnGenerateSeo.innerHTML;
+      dom.btnGenerateSeo.disabled = true;
+      dom.btnGenerateSeo.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Gerando SEO Viral...</span>';
+      lucide.createIcons({ root: dom.btnGenerateSeo });
+
+      try {
+        let result = null;
+
+        // Se o usuário configurou uma chave gratuita do Google Gemini, usa a API diretamente do navegador
+        if (state.geminiApiKey && state.geminiApiKey.trim().length > 10) {
+          const prompt = `Você é um estrategista de crescimento para ${platform}. Crie um Título altamente clicável (máx 70 caracteres com 1 emoji), uma Descrição curta com CTA para comentários e 6 Hashtags virais em português para um clipe sobre: "${context || state.sourceName || 'Momento épico ao vivo'}". Tom: ${tone}. Responda ESTRITAMENTE em JSON válido no formato: {"title":"...","description":"...","hashtags":"#tag1 #tag2 ..."}`;
+
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(state.geminiApiKey.trim())}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: 'application/json' }
+              })
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (rawJson) {
+              result = JSON.parse(rawJson);
+            }
+          } else {
+            showToast('Chave Gemini inválida ou limite atingido. Usando gerador offline instantâneo.', 'warning');
+          }
+        }
+
+        if (!result) {
+          result = generateOfflineViralSeo(context, platform, tone);
+        }
+
+        dom.seoTitleOutput.value = result.title || '';
+        dom.seoDescOutput.value = result.description || '';
+        dom.seoTagsOutput.value = result.hashtags || '';
+        dom.seoOutputBox.classList.remove('hidden');
+        showToast('Título, descrição e hashtags prontos!', 'success');
+      } catch (err) {
+        const fallback = generateOfflineViralSeo(context, platform, tone);
+        dom.seoTitleOutput.value = fallback.title;
+        dom.seoDescOutput.value = fallback.description;
+        dom.seoTagsOutput.value = fallback.hashtags;
+        dom.seoOutputBox.classList.remove('hidden');
+      } finally {
+        dom.btnGenerateSeo.disabled = false;
+        dom.btnGenerateSeo.innerHTML = originalBtnHtml;
+        lucide.createIcons({ root: dom.btnGenerateSeo });
+      }
+    }
+
+    // 11. EVENT LISTENERS E INICIALIZAÇÃO
+    function setupEventListeners() {
+      // Abas do Painel Direito (Formato / Legendas / SEO & Post)
+      document.querySelectorAll('.studio-tab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.studioTab;
+          document.querySelectorAll('.studio-tab').forEach((b) => {
+            b.classList.remove('bg-studio-purple', 'text-white', 'shadow');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-studio-purple', 'text-white', 'shadow');
+          btn.classList.remove('text-zinc-400');
+
+          document.querySelectorAll('.studio-panel').forEach((p) => p.classList.add('hidden'));
+          document.getElementById(`studio-panel-${target}`).classList.remove('hidden');
+        });
+      });
+
+      // Abas de Fonte (URL / Arquivo / Tela)
+      document.querySelectorAll('.source-tab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.sourceTab;
+          state.sourceType = target;
+
+          document.querySelectorAll('.source-tab').forEach((b) => {
+            b.classList.remove('bg-studio-purple', 'text-white', 'shadow');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-studio-purple', 'text-white', 'shadow');
+          btn.classList.remove('text-zinc-400');
+
+          document.querySelectorAll('.source-panel').forEach((p) => p.classList.add('hidden'));
+          document.getElementById(`panel-${target}`).classList.remove('hidden');
+        });
+      });
+
+      // Botão carregar URL e Streams de Teste Pré-configuradas
+      dom.btnLoadUrl.addEventListener('click', () => {
+        loadUrlSource(dom.streamUrlInput.value);
+      });
+
+      dom.streamUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadUrlSource(dom.streamUrlInput.value);
+      });
+
+      document.querySelectorAll('.preset-stream-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const url = btn.dataset.presetUrl;
+          const isLive = btn.dataset.presetLive === 'true';
+          const name = btn.dataset.presetName;
+          dom.streamUrlInput.value = url;
+          loadUrlSource(url, isLive, name);
+        });
+      });
+
+      document.getElementById('btnQuickStartDemo').addEventListener('click', () => {
+        const demoUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+        dom.streamUrlInput.value = demoUrl;
+        loadUrlSource(demoUrl, true, 'Mux Live HLS (Big Buck Bunny)');
+      });
+
+      // Upload Local & Drag-and-Drop
+      dom.dropZone.addEventListener('click', () => dom.localFileInput.click());
+      dom.localFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          loadLocalFile(e.target.files[0]);
+        }
+      });
+
+      dom.dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dom.dropZone.classList.add('border-studio-purple', 'bg-studio-purple/10');
+      });
+      dom.dropZone.addEventListener('dragleave', () => {
+        dom.dropZone.classList.remove('border-studio-purple', 'bg-studio-purple/10');
+      });
+      dom.dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.dropZone.classList.remove('border-studio-purple', 'bg-studio-purple/10');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadLocalFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Captura de Tela / Aba ao Vivo
+      dom.btnStartScreenCapture.addEventListener('click', startScreenCapture);
+      dom.btnStopScreenCapture.addEventListener('click', () => stopScreenCapture(false));
+      dom.btnFreezeBuffer.addEventListener('click', () => freezeScreenBufferForClipping(15));
+      dom.btnResumeLiveCapture.addEventListener('click', resumeLiveScreenMonitoring);
+
+      // Controles de Transporte do Player
+      dom.btnPlayPause.addEventListener('click', () => {
+        if (!state.hasMedia || state.isMonitoringLiveScreen) return;
+        if (dom.sourceVideo.paused) {
+          ensureAudioPipeline();
+          dom.sourceVideo.play();
+        } else {
+          dom.sourceVideo.pause();
+        }
+      });
+
+      dom.sourceVideo.addEventListener('play', () => {
+        dom.iconPlayPause.setAttribute('data-lucide', 'pause');
+        lucide.createIcons({ root: dom.btnPlayPause });
+      });
+
+      dom.sourceVideo.addEventListener('pause', () => {
+        dom.iconPlayPause.setAttribute('data-lucide', 'play');
+        lucide.createIcons({ root: dom.btnPlayPause });
+      });
+
+      dom.sourceVideo.addEventListener('timeupdate', updatePlayheadAndLoop);
+
+      dom.btnJumpToIn.addEventListener('click', () => {
+        if (!state.hasMedia) return;
+        dom.sourceVideo.currentTime = state.inTime;
+      });
+
+      dom.btnJumpToOut.addEventListener('click', () => {
+        if (!state.hasMedia) return;
+        dom.sourceVideo.currentTime = Math.max(state.inTime, state.outTime - 0.2);
+      });
+
+      dom.btnToggleLoop.addEventListener('click', () => {
+        state.loopClip = !state.loopClip;
+        if (state.loopClip) {
+          dom.btnToggleLoop.className = 'px-2.5 py-2 rounded-xl bg-studio-purple/20 border border-studio-purple/40 text-studio-purple text-xs font-semibold flex items-center gap-1.5 transition';
+        } else {
+          dom.btnToggleLoop.className = 'px-2.5 py-2 rounded-xl bg-studio-bg border border-studio-border text-zinc-400 text-xs font-semibold flex items-center gap-1.5 transition';
+        }
+      });
+
+      // Áudio / Mute
+      dom.btnMuteToggle.addEventListener('click', () => {
+        dom.sourceVideo.muted = !dom.sourceVideo.muted;
+        dom.iconVolume.setAttribute('data-lucide', dom.sourceVideo.muted ? 'volume-x' : 'volume-2');
+        lucide.createIcons({ root: dom.btnMuteToggle });
+      });
+
+      dom.volumeSlider.addEventListener('input', (e) => {
+        dom.sourceVideo.volume = Number(e.target.value);
+        dom.sourceVideo.muted = dom.sourceVideo.volume === 0;
+      });
+
+      // Sliders Duplos de In e Out
+      dom.sliderIn.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        state.inTime = Math.min(val, state.outTime - 0.5);
+        syncTimelineUI();
+        if (!state.isMonitoringLiveScreen) {
+          dom.sourceVideo.currentTime = state.inTime;
+        }
+      });
+
+      dom.sliderOut.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        state.outTime = Math.max(val, state.inTime + 0.5);
+        syncTimelineUI();
+      });
+
+      // Botões de Ajuste Fino (-0.5s / +0.5s / Marcar Agora)
+      document.getElementById('btnInMinus').addEventListener('click', () => {
+        state.inTime = Math.max(state.minTime, state.inTime - 0.5);
+        syncTimelineUI();
+        dom.sourceVideo.currentTime = state.inTime;
+      });
+      document.getElementById('btnInPlus').addEventListener('click', () => {
+        state.inTime = Math.min(state.outTime - 0.5, state.inTime + 0.5);
+        syncTimelineUI();
+        dom.sourceVideo.currentTime = state.inTime;
+      });
+      document.getElementById('btnMarkInNow').addEventListener('click', () => {
+        if (!state.hasMedia) return;
+        state.inTime = Math.min(dom.sourceVideo.currentTime, state.outTime - 0.5);
+        syncTimelineUI();
+        showToast(`Início marcado em ${formatTimecode(state.inTime)}`, 'info');
+      });
+
+      document.getElementById('btnOutMinus').addEventListener('click', () => {
+        state.outTime = Math.max(state.inTime + 0.5, state.outTime - 0.5);
+        syncTimelineUI();
+      });
+      document.getElementById('btnOutPlus').addEventListener('click', () => {
+        state.outTime = Math.min(state.maxTime, state.outTime + 0.5);
+        syncTimelineUI();
+      });
+      document.getElementById('btnMarkOutNow').addEventListener('click', () => {
+        if (!state.hasMedia) return;
+        state.outTime = Math.max(dom.sourceVideo.currentTime, state.inTime + 0.5);
+        syncTimelineUI();
+        showToast(`Fim marcado em ${formatTimecode(state.outTime)}`, 'info');
+      });
+
+      // Atalhos Rápidos "Últimos 10s / 20s / 30s"
+      document.querySelectorAll('.quick-clip-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!state.hasMedia) {
+            showToast('Carregue uma live ou vídeo primeiro.', 'warning');
+            return;
+          }
+          const seconds = Number(btn.dataset.quickClip);
+
+          if (state.isMonitoringLiveScreen) {
+            freezeScreenBufferForClipping(seconds);
+            return;
+          }
+
+          // Ancora no ponto ao vivo (maxTime) se estiver ao vivo, ou no tempo atual se estiver em VOD
+          const anchor = state.isLive ? state.maxTime : Math.max(dom.sourceVideo.currentTime, Math.min(state.maxTime, seconds));
+          state.outTime = Math.min(state.maxTime, anchor);
+          state.inTime = Math.max(state.minTime, state.outTime - seconds);
+          syncTimelineUI();
+          dom.sourceVideo.currentTime = state.inTime;
+          showToast(`Selecionados últimos ${seconds}s (${formatTimecode(state.inTime)} → ${formatTimecode(state.outTime)})`, 'success');
+        });
+      });
+
+      // Proporções Sociais (16:9, 9:16, 1:1)
+      document.querySelectorAll('.aspect-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const aspect = btn.dataset.aspect;
+          state.aspectRatio = aspect;
+
+          document.querySelectorAll('.aspect-btn').forEach((b) => {
+            b.classList.remove('border-studio-purple', 'bg-studio-purple/15', 'text-white');
+            b.classList.add('border-studio-border', 'bg-studio-bg', 'text-zinc-400');
+          });
+          btn.classList.add('border-studio-purple', 'bg-studio-purple/15', 'text-white');
+          btn.classList.remove('border-studio-border', 'bg-studio-bg', 'text-zinc-400');
+
+          const dims = getTargetDimensions(aspect);
+          dom.previewCanvas.width = dims.width;
+          dom.previewCanvas.height = dims.height;
+          dom.canvasResolutionBadge.textContent = `${dims.width}×${dims.height} • ${aspect}`;
+
+          if (aspect === '9:16') {
+            dom.verticalFramingBox.classList.remove('hidden');
+            dom.btnToggleSafeZone.classList.remove('hidden');
+            dom.btnToggleSafeZone.classList.add('flex');
+          } else {
+            dom.verticalFramingBox.classList.add('hidden');
+            dom.btnToggleSafeZone.classList.add('hidden');
+            dom.btnToggleSafeZone.classList.remove('flex');
+            dom.safeZoneOverlay.classList.add('hidden');
+            state.showSafeZone = false;
+          }
+        });
+      });
+
+      // Modo de Enquadramento 9:16 (Blur Fill vs Zoom Crop)
+      document.querySelectorAll('.fit-mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.verticalFit = btn.dataset.fit;
+          document.querySelectorAll('.fit-mode-btn').forEach((b) => {
+            b.classList.remove('border-studio-emerald', 'bg-studio-emerald/15', 'text-white');
+            b.classList.add('border-studio-border', 'bg-studio-card', 'text-zinc-400');
+          });
+          btn.classList.add('border-studio-emerald', 'bg-studio-emerald/15', 'text-white');
+          btn.classList.remove('border-studio-border', 'bg-studio-card', 'text-zinc-400');
+        });
+      });
+
+      // Toggle Guias TikTok/Reels
+      dom.btnToggleSafeZone.addEventListener('click', () => {
+        state.showSafeZone = !state.showSafeZone;
+        dom.safeZoneOverlay.classList.toggle('hidden', !state.showSafeZone);
+      });
+
+      // Título / Marca d'água em tempo real
+      dom.watermarkInput.addEventListener('input', (e) => {
+        state.watermarkText = e.target.value;
+      });
+      dom.watermarkPosition.addEventListener('change', (e) => {
+        state.watermarkPos = e.target.value;
+      });
+
+      // Eventos do Sistema de Legendas Estilizadas
+      dom.btnAutoTranscribe.addEventListener('click', toggleAutoSpeechTranscription);
+      dom.btnAddCaptionBlock.addEventListener('click', addManualCaptionBlock);
+      dom.btnClearCaptions.addEventListener('click', () => {
+        state.captions = [];
+        renderCaptionsListUI();
+        showToast('Legendas limpas.', 'info');
+      });
+
+      document.querySelectorAll('.cap-style-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.captionStyle = btn.dataset.capStyle;
+          document.querySelectorAll('.cap-style-btn').forEach((b) => {
+            b.classList.remove('border-studio-purple', 'bg-studio-purple/15');
+            b.classList.add('border-studio-border', 'bg-studio-card');
+          });
+          btn.classList.add('border-studio-purple', 'bg-studio-purple/15');
+          btn.classList.remove('border-studio-border', 'bg-studio-card');
+        });
+      });
+
+      dom.chkCaptionPop.addEventListener('change', (e) => {
+        state.captionHighlightWord = e.target.checked;
+      });
+      dom.captionPositionSelect.addEventListener('change', (e) => {
+        state.captionPosition = e.target.value;
+      });
+      dom.captionSizeSelect.addEventListener('change', (e) => {
+        state.captionSize = e.target.value;
+      });
+
+      // Delegação de edição/exclusão na lista de blocos de legenda
+      dom.captionsListContainer.addEventListener('input', (e) => {
+        const startId = e.target.dataset.capStart;
+        const endId = e.target.dataset.capEnd;
+        const textId = e.target.dataset.capText;
+
+        if (startId) {
+          const cue = state.captions.find(c => String(c.id) === startId);
+          if (cue) cue.start = Math.max(0, Number(e.target.value));
+        } else if (endId) {
+          const cue = state.captions.find(c => String(c.id) === endId);
+          if (cue) cue.end = Math.max(cue.start + 0.2, Number(e.target.value));
+        } else if (textId) {
+          const cue = state.captions.find(c => String(c.id) === textId);
+          if (cue) cue.text = e.target.value;
+        }
+      });
+
+      dom.captionsListContainer.addEventListener('click', (e) => {
+        const delBtn = e.target.closest('[data-cap-del]');
+        if (delBtn) {
+          const id = delBtn.dataset.capDel;
+          state.captions = state.captions.filter(c => String(c.id) !== id);
+          renderCaptionsListUI();
+          return;
+        }
+        const seekBtn = e.target.closest('[data-cap-seek]');
+        if (seekBtn && state.hasMedia && !state.isMonitoringLiveScreen) {
+          const cue = state.captions.find(c => String(c.id) === seekBtn.dataset.capSeek);
+          if (cue) dom.sourceVideo.currentTime = cue.start;
+        }
+      });
+
+      // Eventos do Gerador de SEO Viral (Título, Descrição & Hashtags)
+      dom.btnPullContextFromCaptions.addEventListener('click', () => {
+        if (!state.captions.length) {
+          showToast('Nenhuma legenda cadastrada ainda para importar texto.', 'warning');
+          return;
+        }
+        dom.seoContextInput.value = state.captions.map(c => c.text).join(' ');
+        showToast('Texto importado das legendas!', 'success');
+      });
+
+      dom.btnSaveGeminiKey.addEventListener('click', () => {
+        const val = dom.geminiApiKeyInput.value.trim();
+        state.geminiApiKey = val;
+        if (val) {
+          localStorage.setItem('clipchatt_gemini_key', val);
+          showToast('Chave Gemini salva localmente no seu navegador!', 'success');
+        } else {
+          localStorage.removeItem('clipchatt_gemini_key');
+          showToast('Chave removida. Modo offline ativado.', 'info');
+        }
+        updateGeminiKeyBadge();
+      });
+
+      dom.btnGenerateSeo.addEventListener('click', handleGenerateSeo);
+
+      document.querySelectorAll('.copy-seo-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetEl = document.getElementById(btn.dataset.copyTarget);
+          if (!targetEl) return;
+          targetEl.select();
+          document.execCommand('copy');
+          showToast('Copiado para a área de transferência!', 'success');
+        });
+      });
+
+      dom.btnCopyAllSeo.addEventListener('click', () => {
+        const fullPost = `${dom.seoTitleOutput.value}\n\n${dom.seoDescOutput.value}\n\n${dom.seoTagsOutput.value}`;
+        const tempArea = document.createElement('textarea');
+        tempArea.value = fullPost;
+        document.body.appendChild(tempArea);
+        tempArea.select();
+        document.execCommand('copy');
+        tempArea.remove();
+        showToast('Título, descrição e hashtags copiados juntos!', 'success');
+      });
+
+      // Modal GitHub Pages Deploy & Download do Código-Fonte index.html
+      dom.btnGithubDeployHelp.addEventListener('click', () => dom.githubDeployModal.classList.remove('hidden'));
+      dom.btnCloseGithubModal.addEventListener('click', () => dom.githubDeployModal.classList.add('hidden'));
+      dom.githubDeployModal.addEventListener('click', (e) => {
+        if (e.target === dom.githubDeployModal) dom.githubDeployModal.classList.add('hidden');
+      });
+
+      dom.btnDownloadSourceHtml.addEventListener('click', () => {
+        const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'index.html';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Arquivo index.html baixado! Suba no GitHub Pages para publicar grátis.', 'success');
+      });
+
+      // Botões de Renderização e Cancelamento
+      dom.btnRenderClip.addEventListener('click', renderAndExportClip);
+      dom.btnCancelRender.addEventListener('click', () => {
+        state.cancelRenderFlag = true;
+      });
+
+      // Delegação de eventos da Galeria (Assistir / Excluir)
+      dom.clipsGalleryList.addEventListener('click', (e) => {
+      // Botões do Player Embutido (YouTube / Twitch / Kick) -> Captura 1-Clique da Aba Atual
+      const triggerEmbedCapture = () => startScreenCapture(true);
+      dom.btnCaptureEmbeddedNow.addEventListener('click', triggerEmbedCapture);
+      dom.btnStageCaptureAndAutoClip.addEventListener('click', triggerEmbedCapture);
+      dom.btnCloseEmbedStage.addEventListener('click', () => {
+        dom.embedStageContainer.classList.add('hidden');
+        dom.platformEmbedIframe.src = 'about:blank';
+      });
+
+      // Gerador Automático de Clipes (IA & Análise de Momentos)
+      dom.btnCloseAutoClips.addEventListener('click', () => {
+        dom.autoClipsSuggestionsBox.classList.add('hidden');
+      });
+
+      dom.btnAutoGenerateClips.addEventListener('click', () => {
+        if (!state.hasMedia) {
+          showToast('Carregue um vídeo, stream ou capture uma aba primeiro.', 'warning');
+          return;
+        }
+
+        if (state.isMonitoringLiveScreen) {
+          freezeScreenBufferForClipping(30);
+          setTimeout(() => dom.btnAutoGenerateClips.click(), 650);
+          return;
+        }
+
+        const totalSpan = state.maxTime - state.minTime;
+        if (totalSpan < 3) {
+          showToast('Aguarde acumular pelo menos 3 segundos de vídeo para gerar clipes.', 'warning');
+          return;
+        }
+
+        const clipLen = Math.min(15, Math.max(4, totalSpan / 3));
+        const points = [
+          { start: state.minTime, hype: '98% HYPE', tag: 'Gancho Inicial Viral' },
+          { start: state.minTime + Math.max(0, (totalSpan - clipLen) * 0.5), hype: '95% HYPE', tag: 'Momento Clímax' },
+          { start: Math.max(state.minTime, state.maxTime - clipLen), hype: '92% HYPE', tag: 'Reação Final Épica' }
+        ];
+
+        dom.autoClipsList.innerHTML = '';
+        points.forEach((pt, idx) => {
+          const s = Number(pt.start.toFixed(1));
+          const e = Number(Math.min(state.maxTime, s + clipLen).toFixed(1));
+          const card = document.createElement('div');
+          card.className = 'bg-studio-card border border-studio-border hover:border-studio-emerald/50 rounded-xl p-2.5 flex flex-col justify-between gap-2';
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono">
+                <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">${pt.hype}</span>
+                <span class="text-zinc-400">${formatTimecode(s)} → ${formatTimecode(e)}</span>
+              </div>
+              <p class="text-xs font-bold text-white mt-1">Corte #${idx + 1}: ${pt.tag}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-apply-auto-in="${s}" data-apply-auto-out="${e}" class="py-1.5 px-2 rounded-lg bg-studio-bg hover:bg-studio-elevated border border-studio-border text-[11px] font-semibold text-zinc-200 transition">
+                Ver Corte
+              </button>
+              <button type="button" data-export-auto-in="${s}" data-export-auto-out="${e}" data-export-auto-title="${pt.tag}" class="py-1.5 px-2 rounded-lg bg-studio-emerald hover:bg-studio-emeraldHover text-zinc-950 text-[11px] font-bold transition">
+                Exportar
+              </button>
+            </div>
+          `;
+          dom.autoClipsList.appendChild(card);
+        });
+
+        dom.autoClipsSuggestionsBox.classList.remove('hidden');
+        showToast('3 sugestões de clipes geradas automaticamente!', 'success');
+      });
+
+      dom.autoClipsList.addEventListener('click', (e) => {
+        const applyBtn = e.target.closest('[data-apply-auto-in]');
+        if (applyBtn) {
+          state.inTime = Number(applyBtn.dataset.applyAutoIn);
+          state.outTime = Number(applyBtn.dataset.applyAutoOut);
+          syncTimelineUI();
+          dom.sourceVideo.currentTime = state.inTime;
+          dom.sourceVideo.play().catch(() => {});
+          return;
+        }
+
+        const exportBtn = e.target.closest('[data-export-auto-in]');
+        if (exportBtn) {
+          state.inTime = Number(exportBtn.dataset.exportAutoIn);
+          state.outTime = Number(exportBtn.dataset.exportAutoOut);
+          if (!dom.watermarkInput.value.trim()) {
+            state.watermarkText = exportBtn.dataset.exportAutoTitle;
+            dom.watermarkInput.value = state.watermarkText;
+          }
+          syncTimelineUI();
+          renderAndExportClip();
+        }
+      });
+
+      // Modais
+      dom.btnCloseModal.addEventListener('click', () => {
+        dom.modalVideoPlayer.pause();
+        dom.clipPreviewModal.classList.add('hidden');
+      });
+      dom.clipPreviewModal.addEventListener('click', (e) => {
+        if (e.target === dom.clipPreviewModal) {
+          dom.modalVideoPlayer.pause();
+          dom.clipPreviewModal.classList.add('hidden');
+        }
+      });
+
+      dom.btnShortcutsHelp.addEventListener('click', () => dom.shortcutsModal.classList.remove('hidden'));
+      dom.btnCloseShortcuts.addEventListener('click', () => dom.shortcutsModal.classList.add('hidden'));
+      dom.shortcutsModal.addEventListener('click', (e) => {
+        if (e.target === dom.shortcutsModal) dom.shortcutsModal.classList.add('hidden');
+      });
+
+      // Atalhos de Teclado Globais
+      document.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          dom.btnPlayPause.click();
+        } else if (e.key.toLowerCase() === 'i') {
+          document.getElementById('btnMarkInNow').click();
+        } else if (e.key.toLowerCase() === 'o') {
+          document.getElementById('btnMarkOutNow').click();
+        } else if (e.key === 'ArrowLeft' && state.hasMedia && !state.isMonitoringLiveScreen) {
+          dom.sourceVideo.currentTime = Math.max(state.minTime, dom.sourceVideo.currentTime - 1);
+        } else if (e.key === 'ArrowRight' && state.hasMedia && !state.isMonitoringLiveScreen) {
+          dom.sourceVideo.currentTime = Math.min(state.maxTime, dom.sourceVideo.currentTime + 1);
+        }
+      });
+    }
+
+    // Inicializa ícones Lucide, ouvintes e loop de renderização Canvas
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateGeminiKeyBadge();
+      setupEventListeners();
+      startPreviewLoop();
+    });
+  </script>
+</body>
+</html>
